@@ -3,9 +3,9 @@
 import { GlassCard } from "./glass-card";
 import { cn } from "@/lib/utils";
 
-export function LoadingPanel({ label = "Loading data...", className }: { label?: string; className?: string }) {
+export function LoadingPanel({ label = "Loading data...", className, compact = false }: { label?: string; className?: string; compact?: boolean }) {
   return (
-    <GlassCard className={cn("flex min-h-[220px] flex-col items-center justify-center gap-4 p-8", className)} glow={false}>
+    <GlassCard className={cn(compact ? "min-h-[140px] p-6" : "min-h-[220px] p-8", "flex flex-col items-center justify-center gap-4", className)} glow={false}>
       <div className="relative h-10 w-10">
         <div className="absolute inset-0 animate-spin rounded-full border-2 border-emerald-400/20 border-t-emerald-400" />
         <div className="absolute inset-1.5 animate-ping rounded-full bg-emerald-400/10" />

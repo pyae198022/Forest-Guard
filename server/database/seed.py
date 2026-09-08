@@ -1,53 +1,97 @@
-"""Bootstrap helpers: ensure the CSV exists and mirror it into SQLite."""
+"""ForestGuard AI — dataset bootstrap.
+
+Imports the uploaded PJBook Excel dataset (Deforestation_Data_With_
+Climate_And_Habitat) into the canonical CSV + SQLite mirror used by
+every layer of the app.
+"""
 
 from __future__ import annotations
 
 import json
-import logging
+import shutil
+from pathlib import Path
 
 import pandas as pd
 
 from server.database import sqlite
+from server.ml import config as mlcfg
 from server.utils import config
-from server.utils.dataset_generator import generate_dataset, inject_data_quality_issues
 
-logger = logging.getLogger("forestguard.seed")
+UPLOAD_CANDIDATES = [
+    Path("/home/z/my-project/upload/Deforestation_Data_With_Climate_And_Habitat (1).xlsx"),
+]
+# canonical copy kept inside the project dataset/ directory
+XLSX_COPY = config.DATASET_DIR / "Deforestation_Data_With_Climate_And_Habitat.xlsx"
 
-TARGET = "deforestation_risk"
 
-
-def ensure_csv() -> pd.DataFrame:
-    """Load the dataset CSV; regenerate it from the generator if missing."""
+def _read_source() -> pd.DataFrame:
+    for path in UPLOAD_CANDIDATES:
+        if path.exists():
+            return pd.read_excel(path)
+    if XLSX_COPY.exists():
+        return pd.read_excel(XLSX_COPY)
     if config.CSV_PATH.exists():
-        df = pd.read_csv(config.CSV_PATH)
-        logger.info("Loaded dataset CSV: %s rows", len(df))
-        return df
+        return pd.read_csv(config.CSV_PATH)
+    raise FileNotFoundError(
+        "PJBook dataset not found in upload/ or dataset/ directories")
 
-    logger.info("Dataset CSV missing - generating a fresh one")
-    df = inject_data_quality_issues(generate_dataset())
+
+def dataset_info(df: pd.DataFrame) -> dict:
+    numeric = [c for c in df.columns if df[c].dtype != object]
+    categorical = [c for c in df.columns if df[c].dtype == object]
+    return {
+        "name": "Deforestation Data with Climate and Habitat (PJBook)",
+        "source": "University project book IS-212 — country-year panel",
+        "rows": int(len(df)),
+        "columns": int(df.shape[1]),
+        "numeric_columns": len(numeric),
+        "categorical_columns": len(categorical),
+        "year_min": int(df["Year"].min()),
+        "year_max": int(df["Year"].max()),
+        "entities": int(df["Entity"].nunique()),
+        "regions": sorted(df["Region"].dropna().unique().tolist()),
+        "missing_values": int(df.isna().sum().sum()),
+        "duplicate_records": int(df.duplicated().sum()),
+        "target": mlcfg.TARGET,
+        "split": {"train": f"Year <= {mlcfg.SPLIT_YEAR}",
+                  "test": f"Year > {mlcfg.SPLIT_YEAR}"},
+        "leakage_excluded": mlcfg.LEAKAGE_FEATURES,
+    }
+
+
+def bootstrap(force: bool = False) -> dict:
+    """Ensure CSV + SQLite mirror exist; returns the dataset info."""
     config.DATASET_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_csv(config.CSV_PATH, index=False)
-    return df
-
-
-def seed_raw_table(df: pd.DataFrame, force: bool = False) -> None:
-    """Write the raw dataset into SQLite once (idempotent)."""
-    if not force and sqlite.is_seeded(config.TABLE_RAW):
-        logger.info("Raw table already seeded (%s rows)", sqlite.count_rows(config.TABLE_RAW))
-        return
-    rows = sqlite.save_dataframe(df, config.TABLE_RAW, if_exists="replace")
-    logger.info("Seeded %s raw records into SQLite", rows)
-
-
-def bootstrap(force_reseed: bool = False) -> pd.DataFrame:
-    """Full startup chain: CSV -> SQLite. Returns the raw dataframe."""
     sqlite.init_db()
-    df = ensure_csv()
-    seed_raw_table(df, force=force_reseed)
-    try:
-        info = json.loads(config.INFO_PATH.read_text()) if config.INFO_PATH.exists() else {}
-    except json.JSONDecodeError:
-        info = {}
-    if info:
-        logger.info("Dataset info: %s", info.get("name", "unknown"))
-    return df
+
+    seeded = sqlite.is_seeded(config.TABLE_RAW)
+    if seeded and not force and config.CSV_PATH.exists():
+        return dataset_info(sqlite.load_dataframe(config.TABLE_RAW))
+
+    df = _read_source()
+
+    # normalise dtypes
+    if "Year" in df.columns:
+        df["Year"] = df["Year"].astype(int)
+    for c in ("Extreme_Heat_Days_Count", "IUCN_Threatened_Species_Count"):
+        if c in df.columns:
+            df[c] = df[c].astype(int)
+
+    # canonical CSV (client download + fast reloads)
+    df.to_csv(config.CSV_PATH, index=False)
+    if Path("/home/z/my-project/upload").exists():
+        src = next((p for p in UPLOAD_CANDIDATES if p.exists()), None)
+        if src and not XLSX_COPY.exists():
+            shutil.copy2(src, XLSX_COPY)
+
+    with sqlite.get_connection() as conn:
+        conn.execute(f"DROP TABLE IF EXISTS {config.TABLE_RAW}")
+    sqlite.save_dataframe(df, config.TABLE_RAW)
+
+    info = dataset_info(df)
+    config.INFO_PATH.write_text(json.dumps(info, indent=2))
+
+    # drop stale preprocessed snapshot from any previous schema
+    with sqlite.get_connection() as conn:
+        conn.execute(f"DROP TABLE IF EXISTS {config.TABLE_PREPROCESSED}")
+    return info

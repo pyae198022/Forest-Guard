@@ -25,55 +25,62 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     short: "Overview",
     icon: Gauge,
-    description: "Key metrics and forest health at a glance",
+    description: "PJBook KPIs, temporal split and headline model results",
   },
   {
     key: "explorer",
     label: "Dataset Explorer",
     short: "Data",
     icon: Table2,
-    description: "Browse, search, filter and profile the 4,030-record dataset",
+    description:
+      "Chapter 2.1 — the 4,030 x 27 country-year panel (1990-2020), quality report and attribute dictionary",
   },
   {
     key: "preprocessing",
     label: "Data Preprocessing",
     short: "Prepare",
     icon: Wand2,
-    description: "Clean missing values, duplicates and outliers",
+    description:
+      "Chapter 2.2 — quality audit, log1p transform, one-hot encoding, Min-Max scaling and hybrid feature selection",
   },
   {
     key: "visualization",
     label: "Data Visualization",
     short: "Charts",
     icon: BarChart3,
-    description: "Interactive charts across environmental and social variables",
+    description:
+      "Chapter 2.3 — distributions, outliers, regional spreads, trends and correlation structure",
   },
   {
     key: "mining",
     label: "Descriptive Mining",
     short: "Mining",
     icon: FileBarChart,
-    description: "Statistics, correlations, outliers and K-Means clusters",
+    description:
+      "Chapter 3.1 — Apriori association rules (support/confidence/lift) and K-Means clustering",
   },
   {
     key: "prediction",
     label: "AI Prediction",
     short: "Predict",
     icon: Sparkles,
-    description: "Classify deforestation risk with trained models",
+    description:
+      "Chapter 3.2 — predict Deforestation_Ha and Low/High risk with the trained PJBook models",
   },
   {
     key: "evaluation",
     label: "Model Evaluation",
     short: "Models",
     icon: Database,
-    description: "Compare accuracy, ROC curves and feature importance",
+    description:
+      "Chapter 4 — regression & classification comparisons, ROC-AUC, confusion matrix and 5-fold CV",
   },
   {
     key: "about",
     label: "About Project",
     short: "About",
     icon: Info,
-    description: "Methodology, tech stack and project goals",
+    description:
+      "Project book summary — objectives, methodology, findings and limitations",
   },
 ];

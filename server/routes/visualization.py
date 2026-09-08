@@ -1,4 +1,4 @@
-"""Visualization routes: pre-aggregated chart-ready datasets."""
+"""Visualization routes — PJBook section 2.3 figure set."""
 
 from __future__ import annotations
 
@@ -17,128 +17,153 @@ def _df() -> pd.DataFrame:
     return sqlite.load_dataframe(config.TABLE_RAW)
 
 
-@router.get("/overview")
-def visualization_overview():
-    """Everything the Visualization page needs in one round trip."""
-    df = _df()
-
-    risk_counts = df[mlcfg.TARGET].value_counts().reindex(mlcfg.CLASSES).fillna(0)
-
-    region_risk = (
-        df.groupby(["region", mlcfg.TARGET]).size().unstack(fill_value=0)
-        .reindex(columns=mlcfg.CLASSES, fill_value=0)
-        .reset_index()
-    )
-    region_risk_records = region_risk.to_dict(orient="records")
-
-    region_env = df.groupby("region").agg(
-        avg_ndvi=("ndvi", "mean"),
-        avg_canopy=("canopy_cover_pct", "mean"),
-        avg_rainfall=("annual_rainfall_mm", "mean"),
-        avg_biomass=("biomass_tons_ha", "mean"),
-        avg_species=("species_richness", "mean"),
-        avg_fire_risk=("fire_risk_index", "mean"),
-    ).round(2).reset_index()
-
-    # NDVI decile bands -> canopy area curve
-    banded = df.copy()
-    banded["ndvi_band"] = pd.cut(banded["ndvi"], bins=8)
-    ndvi_curve = banded.groupby("ndvi_band", observed=True).agg(
-        avg_canopy=("canopy_cover_pct", "mean"),
-        avg_biomass=("biomass_tons_ha", "mean"),
-        avg_moisture=("soil_moisture_pct", "mean"),
-        count=("ndvi", "size"),
-    ).round(2).reset_index()
-    ndvi_curve["ndvi_band"] = ndvi_curve["ndvi_band"].astype(str).str.slice(1, -1)
-
-    # elevation bands
-    elev_bands = pd.cut(df["elevation_m"], bins=[0, 250, 500, 1000, 1500, 2500],
-                        labels=["<250", "250-500", "500-1k", "1k-1.5k", ">1.5k"])
-    elev_risk = df.assign(elev_band=elev_bands).groupby(
-        ["elev_band", mlcfg.TARGET], observed=True).size().unstack(fill_value=0)
-    elev_risk = elev_risk.reindex(columns=mlcfg.CLASSES, fill_value=0).reset_index()
-    elev_risk["elev_band"] = elev_risk["elev_band"].astype(str)
-
-    return responses.ok({
-        "risk_donut": [{"risk": k, "value": int(v)} for k, v in risk_counts.items()],
-        "region_risk": region_risk_records,
-        "region_environment": region_env.to_dict(orient="records"),
-        "ndvi_curve": ndvi_curve.to_dict(orient="records"),
-        "elevation_risk": elev_risk.to_dict(orient="records"),
-        "totals": {"rows": int(len(df)), "regions": int(df["region"].nunique())},
-    })
-
-
 @router.get("/histogram")
-def histogram(feature: str = Query(...), bins: int = Query(24, ge=5, le=60),
-              group_by_risk: bool = False):
+def histogram(feature: str = Query(...), bins: int = Query(24, ge=5, le=80)):
+    """Figure 2.2.2.1 — feature distribution + skewness (log-aware)."""
     df = _df()
     if feature not in df.columns:
         return responses.err(f"Unknown feature '{feature}'", 404)
-    if not pd.api.types.is_numeric_dtype(df[feature]):
+    s = df[feature].dropna().astype(float)
+    if s.dtype == object or len(s.unique()) <= 12:
         vc = df[feature].value_counts()
         return responses.ok({
-            "feature": feature,
-            "data": [{"bin": str(k), "count": int(v)} for k, v in vc.items()],
-        })
-
-    clean = df[[feature, mlcfg.TARGET]].dropna()
-    _, edges = pd.cut(clean[feature], bins=bins, retbins=True, duplicates="drop")
-    edges = np.round(edges, 2)
-    data = []
-    if group_by_risk:
-        for risk in mlcfg.CLASSES:
-            subset = clean[clean[mlcfg.TARGET] == risk][feature]
-            counts = pd.cut(subset, bins=edges, include_lowest=True).value_counts().sort_index()
-            entry = {"bin": f"{edges[0]}"}
-            for i, c in enumerate(counts):
-                label = f"[{edges[i]:.4g}, {edges[i+1]:.4g})"
-                data.append({"bin": label, "risk": risk, "count": int(c)})
-    else:
-        counts = pd.cut(clean[feature], bins=edges, include_lowest=True).value_counts().sort_index()
-        for i, c in enumerate(counts):
-            label = f"{edges[i]:.4g}–{edges[i+1]:.4g}"
-            data.append({"bin": label, "count": int(c)})
-    return responses.ok({"feature": feature, "data": data})
-
-
-@router.get("/scatter")
-def scatter(x: str = Query(...), y: str = Query(...),
-            sample: int = Query(600, ge=50, le=2000)):
-    df = _df()
-    for col in (x, y):
-        if col not in df.columns:
-            return responses.err(f"Unknown column '{col}'", 404)
-        if not pd.api.types.is_numeric_dtype(df[col]):
-            return responses.err(f"Column '{col}' is not numeric", 422)
-    sub = df[[x, y, mlcfg.TARGET, "region"]].dropna().sample(
-        n=min(sample, len(df)), random_state=7)
+            "feature": feature, "skew": None,
+            "data": [{"bin": str(k), "count": int(v)}
+                     for k, v in vc.items()]})
+    skew_before = float(s.skew())
+    use_log = feature in mlcfg.LOG1P_FEATURES or skew_before > 3
+    values = np.log1p(s) if use_log else s
+    counts, edges = np.histogram(values, bins=bins)
+    labels = [f"{edges[i]:.4g}–{edges[i+1]:.4g}" for i in range(len(counts))]
+    if use_log:
+        labels = [f"{np.expm1(edges[i]):.4g}–{np.expm1(edges[i+1]):.4g}"
+                  for i in range(len(counts))]
     return responses.ok({
-        "x": x, "y": y,
-        "points": [
-            {**{x: round(float(r[x]), 3), y: round(float(r[y]), 3)},
-             "risk": r[mlcfg.TARGET], "region": r["region"]}
-            for _, r in sub.iterrows()
-        ],
+        "feature": feature,
+        "skew": round(skew_before, 3),
+        "log_transformed": use_log,
+        "data": [{"bin": labels[i], "count": int(c)}
+                 for i, c in enumerate(counts)],
+    })
+
+
+@router.get("/boxplot")
+def boxplot(feature: str = Query(...)):
+    """Figure 2.3.1 — box plot with explicit outlier detection (IQR rule)."""
+    df = _df()
+    if feature not in df.columns:
+        return responses.err(f"Unknown feature '{feature}'", 404)
+    s = df[feature].dropna().astype(float)
+    q1, q3 = s.quantile([0.25, 0.75])
+    iqr = q3 - q1
+    lo_fence, hi_fence = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    outliers = s[(s < lo_fence) | (s > hi_fence)]
+    return responses.ok({
+        "feature": feature,
+        "min": round(float(s.min()), 3),
+        "q1": round(float(q1), 3),
+        "median": round(float(s.median()), 3),
+        "q3": round(float(q3), 3),
+        "max": round(float(s.max()), 3),
+        "lower_fence": round(float(lo_fence), 3),
+        "upper_fence": round(float(hi_fence), 3),
+        "outliers_count": int(len(outliers)),
+        "outliers_pct": round(100 * len(outliers) / len(s), 2),
+        "sample_points": [round(float(v), 3) for v in
+                          np.random.default_rng(7).choice(
+                              s.values, size=min(220, len(s)),
+                              replace=False)],
+    })
+
+
+@router.get("/region-boxplot")
+def region_boxplot():
+    """Figure 2.3.2 — deforestation spread by region."""
+    df = _df()
+    groups = []
+    for region, sub in df.groupby("Region"):
+        s = sub[mlcfg.TARGET].astype(float)
+        q1, q3 = s.quantile([0.25, 0.75])
+        groups.append({
+            "region": region, "count": int(len(s)),
+            "min": round(float(s.min()), 1),
+            "q1": round(float(q1), 1),
+            "median": round(float(s.median()), 1),
+            "q3": round(float(q3), 1),
+            "max": round(float(s.max()), 1),
+            "mean": round(float(s.mean()), 1),
+            "std": round(float(s.std()), 1),
+        })
+    order = ["Other/Global", "Africa", "Asia", "Europe", "North America",
+             "South America", "Oceania"]
+    groups.sort(key=lambda g: order.index(g["region"])
+                if g["region"] in order else 99)
+    return responses.ok({"target": mlcfg.TARGET, "groups": groups})
+
+
+@router.get("/trend")
+def trend():
+    """Figure 2.3.3 — global annual average deforestation 1990-2020."""
+    df = _df()
+    yearly = df.groupby("Year")[mlcfg.TARGET].mean().round(1)
+    return responses.ok({
+        "data": [{"year": int(y), "value": float(v)}
+                 for y, v in yearly.items()],
+        "interpretation": "Sustained long-term decline in average global "
+                          "deforestation across 1990-2020.",
+    })
+
+
+@router.get("/records-by-region")
+def records_by_region():
+    """Figure 2.3.4 — record-count imbalance across regions."""
+    df = _df()
+    vc = df["Region"].value_counts()
+    return responses.ok({
+        "data": [{"region": k, "count": int(v),
+                  "pct": round(100 * v / len(df), 2)}
+                 for k, v in vc.items()],
+        "interpretation": "Geographical imbalance: Other/Global dominates "
+                          "the panel (book limitation 5.2).",
     })
 
 
 @router.get("/correlation")
 def correlation(threshold: float = Query(0.25, ge=0.0, le=1.0)):
+    """Figure 2.3.5 — correlation heat-map matrix."""
     df = _df()
-    numeric = df.select_dtypes(include=[np.number]).drop(columns=["record_id"],
-                                                         errors="ignore")
-    corr = numeric.corr().round(3)
-    pairs = []
-    cols = corr.columns.tolist()
-    for i in range(len(cols)):
-        for j in range(i + 1, len(cols)):
-            v = corr.iloc[i, j]
+    num = df.select_dtypes(include=[np.number]).drop(columns=["record_id"],
+          errors="ignore")
+    corr = num.corr(method="spearman").round(3)
+    cols = list(corr.columns)
+    strong = []
+    target_corr = corr[mlcfg.TARGET].drop(mlcfg.TARGET)
+    for i, a in enumerate(cols):
+        for b in cols[i + 1:]:
+            v = float(corr.loc[a, b])
             if abs(v) >= threshold:
-                pairs.append({"a": cols[i], "b": cols[j], "value": round(float(v), 3)})
-    pairs.sort(key=lambda p: -abs(p["value"]))
+                strong.append({"a": a, "b": b, "corr": v})
+    strong.sort(key=lambda x: -abs(x["corr"]))
     return responses.ok({
         "columns": cols,
         "matrix": corr.values.tolist(),
-        "top_pairs": pairs[:14],
+        "strong_pairs": strong[:24],
+        "target_correlation": [
+            {"feature": f, "corr": round(float(v), 3)}
+            for f, v in target_corr.sort_values(key=abs,
+                                                ascending=False).items()],
     })
+
+
+@router.get("/target-correlation")
+def target_correlation(top: int = Query(12, ge=3, le=25)):
+    """Figure 2.3.6 — features most correlated with Deforestation_Ha."""
+    df = _df()
+    num = df.select_dtypes(include=[np.number]).drop(columns=["Year"],
+          errors="ignore")
+    corr = num.corr(method="spearman")[mlcfg.TARGET].drop(mlcfg.TARGET)
+    rows = [{"feature": f, "corr": round(float(v), 3),
+             "abs": round(float(abs(v)), 3),
+             "leakage": f in mlcfg.LEAKAGE_FEATURES}
+            for f, v in corr.sort_values(key=abs, ascending=False).items()]
+    return responses.ok({"target": mlcfg.TARGET, "data": rows[:top]})

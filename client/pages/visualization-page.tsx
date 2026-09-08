@@ -1,211 +1,275 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@client/components/page-header";
+import { AlertTriangle, Flame } from "lucide-react";
+import { PageHeader, SectionTitle } from "@client/components/page-header";
 import { LoadingPanel, ErrorPanel } from "@client/components/loading";
 import { ChartCard } from "@client/charts/chart-card";
-import { RiskDonut } from "@client/charts/risk-donut";
-import { RegionBars } from "@client/charts/region-bars";
-import { TrendArea } from "@client/charts/trend-area";
 import { FeatureHistogram } from "@client/charts/feature-histogram";
-import { RiskScatter } from "@client/charts/risk-scatter";
 import { CorrelationHeatmap } from "@client/charts/correlation-heatmap";
+import { TrendArea } from "@client/charts/trend-area";
+import { MetricBars } from "@client/charts/metric-bars";
+import { BoxplotChart } from "@client/charts/boxplot-chart";
 import { forestApi } from "@client/services/forest-api";
 import { useApi } from "@client/hooks/use-api";
-import { cn } from "@/lib/utils";
-import type { VizOverview } from "@client/src/types";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import type {
+  BoxplotData,
+  HistogramData,
+  RecordsByRegion,
+  RegionBoxplot,
+  StatsRow,
+  TargetCorrelation,
+  TrendData,
+} from "@client/src/types";
+import { prettyName, RISK_COLORS } from "@client/src/theme";
 
 const NUMERIC_FEATURES = [
-  "ndvi", "canopy_cover_pct", "annual_rainfall_mm", "avg_temperature_c",
-  "elevation_m", "soil_moisture_pct", "fire_risk_index", "species_richness",
-  "biomass_tons_ha", "logging_intensity_index", "population_density_per_km2",
-  "humidity_pct", "drought_index", "invasive_species_pct", "wind_speed_kmh",
+  "Deforestation_Ha",
+  "Forest_Cover_Pct",
+  "Agricultural_Land_Pct",
+  "GDP_Per_Capita",
+  "Population_Density",
+  "Precipitation_mm",
+  "Temperature_Anomaly_C",
+  "PM25_Mean_Exposure_ug_m3",
+  "Biodiversity_Impact_Index",
+  "Poverty_Rate_Pct",
 ];
 
 export function VisualizationPage() {
-  const overview = useApi<VizOverview>(() => forestApi.vizOverview(), []);
-  const [histFeature, setHistFeature] = useState("ndvi");
-  const [histByRisk, setHistByRisk] = useState(false);
-  const [scatterX, setScatterX] = useState("logging_intensity_index");
-  const [scatterY, setScatterY] = useState("ndvi");
+  const stats = useApi<StatsRow[]>(() => forestApi.stats(), []);
+  const [histFeature, setHistFeature] = useState("Deforestation_Ha");
+  const [boxFeature, setBoxFeature] = useState("Deforestation_Ha");
 
-  const hist = useApi<{ data: { bin: string; risk?: string; count: number }[] }>(
-    () => forestApi.histogram(histFeature, 24, histByRisk), [histFeature, histByRisk]);
-  const scatter = useApi<{ x: string; y: string; points: Record<string, number | string>[] }>(
-    () => forestApi.scatter(scatterX, scatterY, 800), [scatterX, scatterY]);
-  const corr = useApi<{ columns: string[]; matrix: number[][]; top_pairs: { a: string; b: string; value: number }[] }>(
-    () => forestApi.correlation(0.2), []);
+  const hist = useApi<HistogramData>(
+    () => forestApi.histogram(histFeature, 28), [histFeature]);
+  const box = useApi<BoxplotData>(
+    () => forestApi.boxplot(boxFeature), [boxFeature]);
+  const regionBox = useApi<RegionBoxplot>(() => forestApi.regionBoxplot(), []);
+  const trend = useApi<TrendData>(() => forestApi.trend(), []);
+  const byRegion = useApi<RecordsByRegion>(() => forestApi.recordsByRegion(), []);
+  const corr = useApi(() => forestApi.correlation(0.3), []);
+  const topCorr = useApi<TargetCorrelation>(() => forestApi.targetCorrelation(12), []);
 
-  if (overview.error && !overview.data)
-    return <ErrorPanel message={overview.error} onRetry={overview.refresh} />;
+  const loading = stats.loading;
+  const error = stats.error;
 
-  const v = overview.data;
+  if (loading && !stats.data) return <LoadingPanel label="Preparing visualisations..." />;
+  if (error && !stats.data) return <ErrorPanel message={error} onRetry={stats.refresh} />;
 
-  const featureSelect = (value: string, onChange: (v: string) => void, className = "w-48") => (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={cn("h-8 border-white/10 bg-white/[0.05] text-xs", className)}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent className="border-white/10 bg-[#0a1f16] text-emerald-50">
-        {NUMERIC_FEATURES.map((f) => (
-          <SelectItem key={f} value={f}>{f.replace(/_/g, " ")}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
+  const featureOptions = (stats.data ?? []).map((s) => s.feature)
+    .filter((f) => f !== "Year");
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Data Visualization"
-        description="Interactive chart gallery over the full dataset — distributions, risk relationships, geographic composition and the correlation structure of all 27 features."
+        description="Chapter 2.3 — exploratory figures that sit between preprocessing and modelling: distributions, outliers, regional spreads, temporal trends and the correlation structure that guides feature selection."
       />
 
-      <Tabs defaultValue="distributions" className="space-y-4">
-        <TabsList className="h-10 gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1 backdrop-blur">
-          {[
-            ["distributions", "Distributions"],
-            ["relationships", "Relationships"],
-            ["correlations", "Correlations"],
-            ["composition", "Composition"],
-          ].map(([key, label]) => (
-            <TabsTrigger key={key} value={key}
-              className="rounded-lg px-4 text-xs font-medium text-emerald-100/55 data-[state=active]:bg-emerald-400/15 data-[state=active]:text-white">
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {/* ---------------- distributions ---------------- */}
-        <TabsContent value="distributions" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <ChartCard
-              title={`Histogram — ${histFeature.replace(/_/g, " ")}`}
-              subtitle="Record counts across value bins"
-              actions={featureSelect(histFeature, setHistFeature)}
+      {/* Fig 2.2.2.1 distribution + skewness */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Feature Distribution & Skewness"
+          subtitle="Figure 2.2.2.1 — heavy right tails motivate the log1p transform"
+          actions={
+            <select
+              value={histFeature}
+              onChange={(e) => setHistFeature(e.target.value)}
+              className="h-8 rounded-md border border-white/10 bg-[#0a1f16] px-2 text-xs text-emerald-100"
             >
-              {hist.loading && !hist.data ? (
-                <div className="flex h-[280px] items-center justify-center text-xs text-emerald-100/40">computing bins…</div>
-              ) : (
-                <FeatureHistogram
-                  data={aggregateBins(hist.data?.data ?? [])}
-                  color="#34d399"
-                />
-              )}
-            </ChartCard>
-
-            {v && (
-              <ChartCard title="Vegetation Gradient" subtitle="Canopy, biomass & moisture along NDVI bands">
-                <TrendArea
-                  data={v.ndvi_curve}
-                  xKey="ndvi_band"
-                  series={[
-                    { key: "avg_canopy", color: "#34d399", label: "Canopy (%)" },
-                    { key: "avg_biomass", color: "#facc15", label: "Biomass (t/ha)" },
-                    { key: "avg_moisture", color: "#2dd4bf", label: "Moisture (%)" },
-                  ]}
-                />
-              </ChartCard>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* ---------------- relationships ---------------- */}
-        <TabsContent value="relationships" className="space-y-4">
-          <ChartCard
-            title="Risk Scatter"
-            subtitle={`Each dot is a forest plot, colored by risk — ${scatterX.replace(/_/g, " ")} vs ${scatterY.replace(/_/g, " ")}`}
-            actions={
-              <div className="flex gap-2">
-                {featureSelect(scatterX, setScatterX, "w-44")}
-                {featureSelect(scatterY, setScatterY, "w-44")}
+              {(featureOptions.length ? featureOptions : NUMERIC_FEATURES).map((f) => (
+                <option key={f} value={f}>{prettyName(f)}</option>
+              ))}
+            </select>
+          }
+          footer={
+            hist.data ? (
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="text-emerald-100/55">
+                  skewness <span className={Math.abs(hist.data.skew ?? 0) > 3 ? "font-semibold text-rose-300" : "text-emerald-300"}>
+                    {hist.data.skew?.toFixed(2) ?? "n/a"}
+                  </span>
+                </span>
+                {hist.data.log_transformed && (
+                  <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-emerald-300">
+                    log-scaled axis
+                  </span>
+                )}
+                <span className="text-emerald-100/35">|skew| &gt; 3 → transformed before modelling</span>
               </div>
-            }
+            ) : null
+          }
+        >
+          {hist.loading || !hist.data ? (
+            <LoadingPanel compact label="Binning..." />
+          ) : (
+            <FeatureHistogram data={hist.data.data} height={300} />
+          )}
+        </ChartCard>
+
+        {/* Fig 2.3.1 box plot + outliers */}
+        <ChartCard
+          title="Box Plot & Outlier Detection"
+          subtitle="Figure 2.3.1 — IQR fences flag extreme observations"
+          actions={
+            <select
+              value={boxFeature}
+              onChange={(e) => setBoxFeature(e.target.value)}
+              className="h-8 rounded-md border border-white/10 bg-[#0a1f16] px-2 text-xs text-emerald-100"
+            >
+              {(featureOptions.length ? featureOptions : NUMERIC_FEATURES).map((f) => (
+                <option key={f} value={f}>{prettyName(f)}</option>
+              ))}
+            </select>
+          }
+          footer={
+            box.data ? (
+              <div className="flex items-center gap-2 text-[11px] text-emerald-100/55">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-300" />
+                <span>
+                  <span className="font-semibold text-amber-300">{box.data.outliers_count}</span> outliers
+                  beyond fences [{box.data.lower_fence.toLocaleString()}, {box.data.upper_fence.toLocaleString()}]
+                  ({box.data.outliers_pct}% of rows)
+                </span>
+              </div>
+            ) : null
+          }
+        >
+          {box.loading || !box.data ? (
+            <LoadingPanel compact label="Measuring..." />
+          ) : (
+            <BoxplotChart
+              boxes={[{
+                label: box.data.feature,
+                min: box.data.min, q1: box.data.q1, median: box.data.median,
+                q3: box.data.q3, max: box.data.max,
+              }]}
+              height={210}
+            />
+          )}
+        </ChartCard>
+      </div>
+
+      {/* Fig 2.3.2 region spread + Fig 2.3.3 trend */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Deforestation Spread by Region"
+          subtitle="Figure 2.3.2 — South America shows the widest and highest range"
+        >
+          {regionBox.loading || !regionBox.data ? (
+            <LoadingPanel compact label="Aggregating..." />
+          ) : (
+            <BoxplotChart
+              boxes={regionBox.data.groups.map((g) => ({
+                label: g.region,
+                min: Math.max(g.min, 1), q1: Math.max(g.q1, 1),
+                median: Math.max(g.median, 1), q3: Math.max(g.q3, 1),
+                max: Math.max(g.max, 1), count: g.count,
+              }))}
+              height={340}
+            />
+          )}
+        </ChartCard>
+
+        <div className="space-y-4">
+          <ChartCard
+            title="Global Annual Trend"
+            subtitle="Figure 2.3.3 — sustained decline 1990-2020"
           >
-            {scatter.loading && !scatter.data ? (
-              <div className="flex h-[320px] items-center justify-center text-xs text-emerald-100/40">sampling points…</div>
-            ) : scatter.error ? (
-              <p className="p-6 text-center text-xs text-rose-300/70">{scatter.error}</p>
+            {trend.loading || !trend.data ? (
+              <LoadingPanel compact label="Loading..." />
             ) : (
-              <RiskScatter x={scatterX} y={scatterY} points={scatter.data?.points ?? []} />
+              <TrendArea
+                data={trend.data.data as unknown as Record<string, number | string>[]}
+                xKey="year"
+                series={[{ key: "value", color: "#34d399", label: "Avg ha" }]}
+                height={190}
+              />
             )}
           </ChartCard>
-        </TabsContent>
 
-        {/* ---------------- correlations ---------------- */}
-        <TabsContent value="correlations" className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <ChartCard title="Correlation Matrix" subtitle="Pearson ρ over all numeric features"
-            className="xl:col-span-2">
-            {corr.loading && !corr.data ? (
-              <div className="flex h-[420px] items-center justify-center text-xs text-emerald-100/40">computing matrix…</div>
-            ) : corr.data ? (
-              <CorrelationHeatmap columns={corr.data.columns} matrix={corr.data.matrix} height={460} />
-            ) : null}
+          <ChartCard
+            title="Records by Region"
+            subtitle="Figure 2.3.4 — Other/Global dominates the panel"
+          >
+            {byRegion.loading || !byRegion.data ? (
+              <LoadingPanel compact label="Counting..." />
+            ) : (
+              <MetricBars
+                data={byRegion.data.data.map((d) => ({
+                  name: d.region.replace("Other/Global", "Other"),
+                  count: d.count,
+                }))}
+                metrics={[{ key: "count", label: "Records" }]}
+                height={170}
+              />
+            )}
           </ChartCard>
-          <ChartCard title="Strongest Pairs" subtitle="|ρ| ≥ 0.25 ranked by absolute value">
-            <div className="space-y-2">
-              {(corr.data?.top_pairs ?? []).slice(0, 12).map((p, i) => {
-                const pos = p.value >= 0;
-                return (
-                  <div key={i} className="flex items-center gap-2 text-[11px]">
-                    <span className="w-36 truncate text-emerald-100/70">{p.a.replace(/_/g, " ")}</span>
-                    <span className="text-emerald-100/30">×</span>
-                    <span className="w-36 truncate text-emerald-100/70">{p.b.replace(/_/g, " ")}</span>
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                      <div className="h-full rounded-full"
-                        style={{ width: `${Math.abs(p.value) * 100}%`, backgroundColor: pos ? "#34d399" : "#fb7185" }} />
-                    </div>
-                    <span className="w-10 text-right font-mono" style={{ color: pos ? "#6ee7b7" : "#fda4af" }}>
-                      {p.value.toFixed(2)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </ChartCard>
-        </TabsContent>
+        </div>
+      </div>
 
-        {/* ---------------- composition ---------------- */}
-        <TabsContent value="composition" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {v && (
-            <>
-              <ChartCard title="Risk Balance" subtitle="Target class distribution">
-                <RiskDonut data={v.risk_donut} />
-              </ChartCard>
-              <ChartCard title="Region × Risk" subtitle="Stacked composition per ecoregion" className="lg:col-span-2">
-                <RegionBars data={v.region_risk} />
-              </ChartCard>
-              <ChartCard title="Elevation Bands × Risk" subtitle="How risk shifts with altitude" className="lg:col-span-2">
-                <RegionBars data={v.elevation_risk} />
-              </ChartCard>
-              <ChartCard title="Regional Averages" subtitle="Mean NDVI vs canopy by region">
-                <TrendArea
-                  data={v.region_environment.map((r) => ({ region: r.region.replace(" ", "\n"), avg_canopy: r.avg_canopy, avg_ndvi: r.avg_ndvi * 100 }))}
-                  xKey="region"
-                  series={[
-                    { key: "avg_canopy", color: "#34d399", label: "Canopy (%)" },
-                    { key: "avg_ndvi", color: "#2dd4bf", label: "NDVI ×100" },
-                  ]}
-                  height={260}
-                />
-              </ChartCard>
-            </>
+      {/* Fig 2.3.5 heatmap + Fig 2.3.6 top correlations */}
+      <SectionTitle
+        title="Correlation Structure"
+        subtitle="Spearman coefficients — collinearity clusters feed the feature-selection step"
+      />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <ChartCard
+          title="Correlation Heat-map"
+          subtitle="Figure 2.3.5 — emissions & carbon-sink move together (ρ ≈ 1)"
+          className="xl:col-span-3"
+        >
+          {corr.loading || !corr.data ? (
+            <LoadingPanel compact label="Computing..." />
+          ) : (
+            <CorrelationHeatmap
+              columns={corr.data.columns}
+              matrix={corr.data.matrix}
+              height={430}
+            />
           )}
-          {!v && <LoadingPanel className="lg:col-span-3" />}
-        </TabsContent>
-      </Tabs>
+        </ChartCard>
+
+        <ChartCard
+          title="Top Features vs Target"
+          subtitle="Figure 2.3.6 — |Spearman| with Deforestation_Ha"
+          className="xl:col-span-2"
+          contentClassName="max-h-[470px] space-y-1.5 overflow-y-auto"
+        >
+          {topCorr.loading || !topCorr.data ? (
+            <LoadingPanel compact label="Ranking..." />
+          ) : (
+            topCorr.data.data.map((r) => (
+              <div key={r.feature} className="flex items-center gap-2 text-xs">
+                <span className={`w-44 truncate ${r.leakage ? "text-rose-300/80" : "text-emerald-100/80"}`}>
+                  {prettyName(r.feature)}
+                </span>
+                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${r.abs * 100}%`,
+                      background: r.leakage
+                        ? "linear-gradient(90deg,#fb7185,#fda4af)"
+                        : "linear-gradient(90deg,#059669,#6ee7b7)",
+                    }}
+                  />
+                </div>
+                <span className="w-12 text-right text-emerald-100/55">{r.corr}</span>
+                {r.leakage && <Flame className="h-3 w-3 text-rose-400/70" />}
+              </div>
+            ))
+          )}
+          {topCorr.data && (
+            <p className="pt-2 text-[11px] leading-relaxed text-rose-200/60">
+              <Flame className="mr-1 inline h-3 w-3" />Red bars mark the four
+              leakage columns (ρ ≈ 1.0) plus Environmental_Impact_Score —
+              excluded from prediction features per book section 3.2.2.
+            </p>
+          )}
+        </ChartCard>
+      </div>
     </div>
   );
-}
-
-/** collapse per-risk binned rows into single-bin sums when not grouping */
-function aggregateBins(data: { bin: string; risk?: string; count: number }[]) {
-  if (!data.length || data[0].risk === undefined) return data;
-  const merged = new Map<string, number>();
-  for (const d of data) merged.set(d.bin, (merged.get(d.bin) ?? 0) + d.count);
-  return [...merged.entries()].map(([bin, count]) => ({ bin, count }));
 }

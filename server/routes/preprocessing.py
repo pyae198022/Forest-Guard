@@ -1,191 +1,91 @@
-"""Preprocessing routes: quality overview, pipeline execution, run history."""
+"""Preprocessing routes — PJBook section 2.2 pipeline."""
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
-
-import numpy as np
-import pandas as pd
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
 
 from server.database import sqlite
 from server.ml import config as mlcfg
-from server.ml.preprocessing import iqr_outlier_counts, winsorize_outliers
+from server.ml import preprocessing as mlprep
 from server.utils import config, responses
 
 router = APIRouter(prefix="/api/preprocessing", tags=["preprocessing"])
 
-QUALITY_WEIGHTS = {"missing": 0.4, "duplicates": 0.3, "outliers": 0.3}
+_PIPELINE_CACHE: dict | None = None
 
 
-def quality_score(df: pd.DataFrame) -> float:
-    """Composite 0-100 score: missing values, duplicates and IQR outliers."""
-    total_cells = max(1, df.shape[0] * df.shape[1])
-    missing = float(df.isna().sum().sum()) / total_cells
-    dupes = float(df.duplicated(subset=df.columns.drop("record_id")).sum()) / max(1, len(df))
-    outliers = iqr_outlier_counts(df)
-    outlier_cells = sum(v["count"] for v in outliers.values())
-    outlier_rate = outlier_cells / max(1, df.select_dtypes(include=[np.number]).size)
-    score = 100 * (
-        1 - QUALITY_WEIGHTS["missing"] * missing * 10
-        - QUALITY_WEIGHTS["duplicates"] * dupes
-        - QUALITY_WEIGHTS["outliers"] * min(1.0, outlier_rate * 10)
-    )
-    return round(max(0.0, min(100.0, score)), 1)
-
-
-class PipelineOptions(BaseModel):
-    missing_strategy: str = Field("median", pattern="^(mean|median|most_frequent)$")
-    scaling: str = Field("standard", pattern="^(standard|minmax|robust|none)$")
-    outlier_handling: str = Field("winsorize", pattern="^(none|winsorize)$")
-    drop_duplicates: bool = True
-    drop_high_missing: bool = True
-    missing_threshold: float = Field(30.0, ge=0, le=100)
-    save_result: bool = True
+def _df():
+    return sqlite.load_dataframe(config.TABLE_RAW)
 
 
 @router.get("/overview")
-def preprocessing_overview():
-    df = sqlite.load_dataframe(config.TABLE_RAW)
-    missing_by_col = [
-        {"column": c, "missing": int(v), "pct": round(float(v) / len(df) * 100, 2)}
-        for c, v in df.isna().sum().items() if v > 0
-    ]
-    missing_by_col.sort(key=lambda x: -x["missing"])
-    outliers = iqr_outlier_counts(df)
-    top_outliers = sorted(outliers.items(), key=lambda kv: -kv[1]["count"])[:8]
-
-    dtypes = df.dtypes.astype(str).value_counts().to_dict()
+def overview():
+    """Book 2.2.1/2.2.2/2.2.4 — full pipeline report (no side effects)."""
+    df = _df()
+    leak = [{
+        "feature": f,
+        "spearman_with_target": round(float(
+            df[f].corr(df[mlcfg.TARGET], method="spearman")), 4)
+    } for f in mlcfg.LEAKAGE_FEATURES]
     return responses.ok({
-        "rows": int(len(df)),
-        "columns": int(df.shape[1]),
-        "missing_total": int(df.isna().sum().sum()),
-        "missing_by_column": missing_by_col,
-        "duplicates": int(df.duplicated(subset=df.columns.drop("record_id")).sum()),
-        "constant_columns": [c for c in df.columns if df[c].nunique(dropna=True) <= 1],
-        "dtype_counts": dtypes,
-        "outlier_summary": [
-            {"column": c, "count": v["count"], "pct": v["pct"],
-             "lower": round(v["lower"], 2), "upper": round(v["upper"], 2)}
-            for c, v in top_outliers
-        ],
-        "quality_score": quality_score(df),
+        "quality": mlprep.quality_report(df),
+        "skewness": mlprep.skewness_report(df),
+        "onehot": mlprep.onehot_summary(df),
+        "minmax": mlprep.minmax_preview(df),
+        "leakage_excluded": leak,
+        "rationale": ("Section 3.2.2 — downstream effects / target-derived "
+                      "scores are removed to prevent target leakage and "
+                      "look-ahead bias."),
+        "split": {"rule": f"train Year <= {mlcfg.SPLIT_YEAR}, "
+                          f"test Year > {mlcfg.SPLIT_YEAR}",
+                  "train_rows": int((df["Year"] <= mlcfg.SPLIT_YEAR).sum()),
+                  "test_rows": int((df["Year"] > mlcfg.SPLIT_YEAR).sum())},
     })
 
 
 @router.post("/run")
-def run_pipeline(options: PipelineOptions):
-    raw = sqlite.load_dataframe(config.TABLE_RAW)
-    df = raw.copy()
-    rows_in = len(df)
-    steps: list[dict] = []
+def run(refresh: bool = False):
+    """Execute the full book pipeline: quality -> log1p -> one-hot ->
+    min-max -> hybrid feature ranking -> temporal subset validation.
+    Results are cached in-process (the panel is static) so repeat runs
+    return instantly; pass ?refresh=true to force a recompute."""
+    global _PIPELINE_CACHE
+    if _PIPELINE_CACHE is not None and not refresh:
+        return responses.ok({**_PIPELINE_CACHE, "cached": True})
+    df = _df()
+    quality = mlprep.quality_report(df)
+    skew = mlprep.skewness_report(df)
+    onehot = mlprep.onehot_summary(df)
+    minmax = mlprep.minmax_preview(df)
+    hybrid = mlprep.hybrid_scores(df)
+    validation = mlprep.temporal_validation(df, hybrid["ranking_order"])
 
-    # 1. duplicate removal
-    if options.drop_duplicates:
-        before = len(df)
-        df = df.drop_duplicates(subset=df.columns.drop("record_id"), keep="first")
-        removed = before - len(df)
-        steps.append({"step": "Remove duplicate rows", "detail": f"{removed} rows removed",
-                      "rows_after": int(len(df))})
-
-    # 2. drop columns with too many missing values
-    if options.drop_high_missing:
-        thresh = options.missing_threshold / 100
-        high_missing = [c for c in df.columns if df[c].isna().mean() > thresh]
-        if high_missing:
-            df = df.drop(columns=high_missing)
-            steps.append({"step": "Drop high-missing columns",
-                          "detail": f"Dropped: {', '.join(high_missing)} (> {options.missing_threshold}%)",
-                          "rows_after": int(len(df))})
-
-    # 3. missing value imputation
-    imputed_cells = 0
-    for col in df.columns:
-        n_missing = int(df[col].isna().sum())
-        if n_missing == 0:
-            continue
-        imputed_cells += n_missing
-        if pd.api.types.is_numeric_dtype(df[col]):
-            if options.missing_strategy == "median":
-                fill = df[col].median()
-            elif options.missing_strategy == "most_frequent":
-                fill = df[col].mode().iloc[0]
-            else:
-                fill = df[col].mean()
-        else:
-            fill = df[col].mode().iloc[0]
-        df[col] = df[col].fillna(fill)
-    steps.append({"step": f"Impute missing values ({options.missing_strategy})",
-                  "detail": f"{imputed_cells} cells filled", "rows_after": int(len(df))})
-
-    # 4. outlier treatment
-    if options.outlier_handling == "winsorize":
-        numeric_cols = [c for c in df.select_dtypes(include=[np.number]).columns
-                        if c not in ("record_id", "protected_area_flag")]
-        df, capped = winsorize_outliers(df, numeric_cols)
-        total_capped = sum(capped.values())
-        steps.append({"step": "Winsorize outliers (1st/99th percentile)",
-                      "detail": f"{total_capped} extreme cells capped",
-                      "rows_after": int(len(df))})
-
-    # 5. type optimization
-    for col in df.select_dtypes(include=["float64"]).columns:
-        if (df[col].dropna() % 1 == 0).all() and df[col].max() < 2 ** 31:
-            df[col] = df[col].astype("int64")
-    steps.append({"step": "Optimize data types",
-                  "detail": f"Memory: {raw.memory_usage(deep=True).sum() // 1024} KB -> "
-                            f"{df.memory_usage(deep=True).sum() // 1024} KB",
-                  "rows_after": int(len(df))})
-
-    # 6. encoding preview (what training pipeline applies)
-    steps.append({
-        "step": "Encode categoricals + scale numerics",
-        "detail": f"One-hot 'region' ({df['region'].nunique()} levels), "
-                  f"{options.scaling} scaling applied at training time",
-        "rows_after": int(len(df)),
-    })
-
-    score_before = quality_score(raw)
-    score_after = quality_score(df)
-
-    preview_cols = [c for c in df.columns][:12]
-    if options.save_result:
-        sqlite.save_dataframe(df, config.TABLE_PREPROCESSED, if_exists="replace")
-        sqlite.insert_run_log(config.TABLE_RUNS, {
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "options": json.dumps(options.model_dump()),
-            "rows_in": rows_in,
-            "rows_out": int(len(df)),
-            "steps": json.dumps(steps),
-            "quality_before": score_before,
-            "quality_after": score_after,
-        })
-
-    return responses.ok({
-        "rows_in": rows_in,
-        "rows_out": int(len(df)),
-        "steps": steps,
-        "quality_before": score_before,
-        "quality_after": score_after,
-        "missing_before": int(raw.isna().sum().sum()),
-        "missing_after": int(df.isna().sum().sum()),
-        "duplicates_before": int(raw.duplicated(subset=raw.columns.drop("record_id")).sum()),
-        "duplicates_after": int(df.duplicated(subset=df.columns.drop("record_id")).sum()) if "record_id" in df.columns else 0,
-        "preview": df[preview_cols].head(10).to_dict(orient="records"),
-        "preview_columns": preview_cols,
-        "options": options.model_dump(),
-    })
-
-
-@router.get("/history")
-def run_history(limit: int = 5):
-    runs = sqlite.fetch_run_logs(config.TABLE_RUNS, limit=limit)
-    for r in runs:
-        for field in ("options", "steps"):
-            try:
-                r[field] = json.loads(r[field])
-            except (json.JSONDecodeError, TypeError):
-                pass
-    return responses.ok(runs)
+    steps = [
+        {"step": 1, "name": "Data quality audit (2.2.1)",
+         "detail": f"{quality['total_records']} records x "
+                   f"{quality['total_attributes']} attributes · "
+                   f"missing={quality['missing_values']} · "
+                   f"duplicates={quality['duplicate_records']}"},
+        {"step": 2, "name": "log1p transform (2.2.2)",
+         "detail": "Applied to the 5 highly skewed features "
+                   "(skew ~10.6 -> ~0)"},
+        {"step": 3, "name": "One-hot encoding (2.2.2)",
+         "detail": f"{onehot['features_encoded']} -> "
+                   f"+{onehot['dummy_columns']} dummy columns"},
+        {"step": 4, "name": "Min-Max scaling (2.2.4)",
+         "detail": "Fit on the training split only (no future leakage)"},
+        {"step": 5, "name": "Hybrid feature ranking (2.2.3)",
+         "detail": "Spearman + Mutual Information + RF permutation "
+                   "importance over 19 candidates"},
+        {"step": 6, "name": "Temporal subset validation (2.2.3)",
+         "detail": f"Subset sizes {mlcfg.SUBSET_SIZES}+all validated on "
+                   "2012-2015 window"},
+    ]
+    result = {
+        "quality": quality, "skewness": skew, "onehot": onehot,
+        "minmax": minmax, "hybrid_ranking": hybrid["ranking"],
+        "candidates": hybrid["candidates"],
+        "validation": validation, "steps": steps,
+    }
+    _PIPELINE_CACHE = result
+    return responses.ok({**result, "cached": False})

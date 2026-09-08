@@ -1,279 +1,331 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, CheckCircle2, Copy, CopyX, FileWarning, PlayCircle, Wand2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { PageHeader, SectionTitle } from "@client/components/page-header";
-import { StatCard, StatCardSkeleton } from "@client/components/stat-card";
-import { LoadingPanel, ErrorPanel } from "@client/components/loading";
-import { GlassCard } from "@client/components/glass-card";
-import { forestApi, type PipelineOptions } from "@client/services/forest-api";
-import { useApi } from "@client/hooks/use-api";
-import { cn } from "@/lib/utils";
-import type { PipelineResult, QualityOverview } from "@client/src/types";
-import { Switch } from "@/components/ui/switch";
+import { motion } from "framer-motion";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  CheckCircle2,
+  Filter,
+  Play,
+  RefreshCw,
+  Sigma,
+  Split,
+  Wand2,
+} from "lucide-react";
+import { PageHeader, SectionTitle } from "@client/components/page-header";
+import { LoadingPanel, ErrorPanel } from "@client/components/loading";
+import { ChartCard } from "@client/charts/chart-card";
+import { forestApi } from "@client/services/forest-api";
+import { useApi } from "@client/hooks/use-api";
+import type { PipelineResult, PreprocessingOverview } from "@client/src/types";
+import { prettyName } from "@client/src/theme";
 import { Button } from "@/components/ui/button";
 
 export function PreprocessingPage() {
-  const overview = useApi<QualityOverview>(() => forestApi.qualityOverview(), []);
-  const [options, setOptions] = useState<PipelineOptions>({
-    missing_strategy: "median",
-    scaling: "standard",
-    outlier_handling: "winsorize",
-    drop_duplicates: true,
-    drop_high_missing: true,
-    missing_threshold: 30,
-    save_result: true,
-  });
+  const overview = useApi<PreprocessingOverview>(
+    () => forestApi.preprocessingOverview(), [],
+  );
+  const [pipeline, setPipeline] = useState<PipelineResult | null>(null);
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<PipelineResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const runPipeline = async () => {
     setRunning(true);
-    setResult(null);
+    setRunError(null);
     try {
-      const res = await forestApi.runPipeline(options);
-      // small stagger so the step animation is perceivable
-      await new Promise((r) => setTimeout(r, 400));
-      setResult(res);
-      toast({ title: "Pipeline complete", description: `${res.rows_in} → ${res.rows_out} rows · quality ${res.quality_before} → ${res.quality_after}` });
-      overview.refresh();
+      setPipeline(await forestApi.runPipeline());
     } catch (e) {
-      toast({ title: "Pipeline failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      setRunError(e instanceof Error ? e.message : "Pipeline failed");
     } finally {
       setRunning(false);
     }
   };
 
+  if (overview.loading && !overview.data)
+    return <LoadingPanel label="Loading preprocessing overview..." />;
   if (overview.error && !overview.data)
     return <ErrorPanel message={overview.error} onRetry={overview.refresh} />;
 
-  const o = overview.data;
+  const o = overview.data!;
+  const ranking = pipeline?.hybrid_ranking ?? [];
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Data Preprocessing"
-        description="Audit data quality, then configure and execute the cleaning pipeline: duplicate removal, missing-value imputation, outlier winsorization and type optimization. Results are persisted to SQLite for model training."
+        description="Chapter 2.2 — a systematic pipeline that turns the raw panel into a model-ready matrix: quality audit, log1p variance stabilisation, one-hot encoding, Min-Max normalisation and hybrid feature selection under anti-leakage rules."
+        actions={
+          <Button
+            onClick={runPipeline}
+            disabled={running}
+            className="gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-sm text-white hover:from-emerald-400 hover:to-teal-400"
+          >
+            {running ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {running ? "Running..." : "Run Full Pipeline"}
+          </Button>
+        }
       />
 
-      {/* quality overview */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {!o ? Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />) : (
-          <>
-            <StatCard index={0} label="Quality Score" value={`${o.quality_score}`} unit="/100" tone="teal" icon={Wand2} hint="missing + duplicates + outliers" />
-            <StatCard index={1} label="Missing Cells" value={o.missing_total} tone="amber" icon={FileWarning} hint={`${o.missing_by_column.length} columns affected`} />
-            <StatCard index={2} label="Duplicate Rows" value={o.duplicates} tone="rose" icon={CopyX} hint="identical feature vectors" />
-            <StatCard index={3} label="Rows × Columns" value={`${o.rows.toLocaleString()} × ${o.columns}`} icon={Copy} hint={Object.entries(o.dtype_counts).map(([k, v]) => `${v} ${k}`).join(" · ")} />
-          </>
-        )}
+      {/* step timeline */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {(pipeline?.steps ?? [
+          { step: 1, name: "Data quality audit (2.2.1)", detail: `${o.quality.total_records} records × ${o.quality.total_attributes} attributes · missing = ${o.quality.missing_values} · duplicates = ${o.quality.duplicate_records}` },
+          { step: 2, name: "log1p transform (2.2.2)", detail: "Applied to the 5 highly skewed features (skew ≈ 10.6)" },
+          { step: 3, name: "One-hot encoding (2.2.2)", detail: `${o.onehot.features_encoded.join(", ")} → +${o.onehot.dummy_columns} dummy columns` },
+          { step: 4, name: "Min-Max scaling (2.2.4)", detail: "Fit on the training split only — no future information" },
+          { step: 5, name: "Hybrid feature ranking (2.2.3)", detail: "Spearman + Mutual Information + RF permutation importance" },
+          { step: 6, name: "Temporal subset validation", detail: "Subset sizes 5/8/10/12/15 tested on the 2012-2015 window" },
+        ]).map((s, i) => (
+          <motion.div
+            key={s.step}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            className="rounded-2xl border border-white/10 bg-white/[0.05] p-4 backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-2 text-sm font-medium text-white">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-400/15 text-[11px] font-semibold text-emerald-300">
+                {s.step}
+              </span>
+              {s.name}
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-emerald-100/50">{s.detail}</p>
+          </motion.div>
+        ))}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* quality detail */}
-        <div className="space-y-4 lg:col-span-2">
-          {o && (
-            <GlassCard className="p-5">
-              <SectionTitle>Missing values by column</SectionTitle>
-              {o.missing_by_column.length === 0 ? (
-                <p className="flex items-center gap-2 text-sm text-emerald-200/70">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" /> No missing values detected.
-                </p>
-              ) : (
-                <div className="space-y-2.5">
-                  {o.missing_by_column.map((m) => (
-                    <div key={m.column} className="flex items-center gap-3 text-xs">
-                      <span className="w-44 truncate text-emerald-100/65">{m.column}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(4, m.pct * 12)}%` }}
-                          className="h-full rounded-full bg-gradient-to-r from-amber-400/60 to-amber-400" />
-                      </div>
-                      <span className="w-16 text-right font-mono text-emerald-100/50">{m.missing} ({m.pct}%)</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+      {/* split + leakage */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Temporal Split — No Shuffling"
+          subtitle={o.split.rule}
+          footer={
+            <p className="text-[11px] leading-relaxed text-emerald-100/45">
+              Random 80/20 splits would let 2016-2020 patterns leak backwards in
+              time. Training strictly on history up to 2015 replicates a genuine
+              forecasting deployment (book sections 1.3 and 3.2.2).
+            </p>
+          }
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex-1 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-4 text-center">
+              <div className="text-2xl font-semibold text-emerald-300">{o.split.train_rows.toLocaleString()}</div>
+              <div className="text-[11px] text-emerald-100/50">training rows (1990-2015)</div>
+            </div>
+            <Split className="h-5 w-5 shrink-0 text-emerald-100/30" />
+            <div className="flex-1 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-center">
+              <div className="text-2xl font-semibold text-amber-300">{o.split.test_rows.toLocaleString()}</div>
+              <div className="text-[11px] text-emerald-100/50">test rows (2016-2020)</div>
+            </div>
+          </div>
+        </ChartCard>
 
-              <div className="mt-5">
-                <SectionTitle>Outlier candidates (IQR × 1.5)</SectionTitle>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {o.outlier_summary.map((out) => (
-                    <div key={out.column} className="rounded-lg border border-rose-400/15 bg-rose-400/[0.06] p-2.5">
-                      <p className="truncate text-[11px] font-medium text-rose-200/85">{out.column.replace(/_/g, " ")}</p>
-                      <p className="mt-0.5 font-mono text-xs text-rose-100/60">{out.count} cells · {out.pct}%</p>
-                    </div>
-                  ))}
-                </div>
+        <ChartCard
+          title="Leakage Exclusion List"
+          subtitle={o.rationale}
+        >
+          <div className="space-y-2">
+            {o.leakage_excluded.map((l) => (
+              <div key={l.feature} className="flex items-center justify-between rounded-lg border border-rose-400/15 bg-rose-400/[0.05] px-3 py-2">
+                <span className="flex items-center gap-2 text-xs text-rose-200/85">
+                  <Filter className="h-3.5 w-3.5" /> {prettyName(l.feature)}
+                </span>
+                <span className="text-[11px] text-rose-200/50">ρ = {l.spearman_with_target}</span>
               </div>
-            </GlassCard>
-          )}
+            ))}
+            <p className="pt-1 text-[11px] leading-relaxed text-emerald-100/45">
+              These columns are downstream effects of deforestation itself
+              (ρ ≈ 1.0 with the target). Keeping them would turn the model into
+              an oracle that cheats with hindsight.
+            </p>
+          </div>
+        </ChartCard>
+      </div>
 
-          {/* pipeline result */}
-          <AnimatePresence>
-            {result && (
-              <GlassCard className="p-5" key="result">
-                <SectionTitle right={
-                  <span className="text-xs text-emerald-300/80">{result.rows_in} → {result.rows_out} rows</span>
-                }>
-                  Pipeline result
-                </SectionTitle>
+      {/* skewness + onehot/minmax */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Skewness Before / After log1p"
+          subtitle="Section 2.2.2 — the five heavily right-skewed features"
+        >
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="text-emerald-100/50">
+                <th className="px-2 py-2">Feature</th>
+                <th className="px-2 py-2 text-right">Skew before</th>
+                <th className="px-2 py-2 text-right">Skew after</th>
+                <th className="px-2 py-2 text-right">Zeros</th>
+              </tr>
+            </thead>
+            <tbody>
+              {o.skewness.map((s) => (
+                <tr key={s.feature} className="border-b border-white/[0.04]">
+                  <td className="px-2 py-2 font-medium text-emerald-100">{prettyName(s.feature)}</td>
+                  <td className="px-2 py-2 text-right">
+                    <span className="rounded-md bg-rose-400/15 px-1.5 py-0.5 text-rose-300">{s.skew_before}</span>
+                  </td>
+                  <td className="px-2 py-2 text-right">
+                    <span className="rounded-md bg-emerald-400/15 px-1.5 py-0.5 text-emerald-300">{s.skew_after}</span>
+                  </td>
+                  <td className="px-2 py-2 text-right text-emerald-100/50">{s.zeros}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ChartCard>
 
-                <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {[
-                    { label: "Missing", before: result.missing_before, after: result.missing_after },
-                    { label: "Duplicates", before: result.duplicates_before, after: result.duplicates_after },
-                    { label: "Quality", before: result.quality_before, after: result.quality_after },
-                    { label: "Rows", before: result.rows_in, after: result.rows_out },
-                  ].map((cmp) => (
-                    <div key={cmp.label} className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
-                      <p className="text-[11px] text-emerald-100/45">{cmp.label}</p>
-                      <p className="mt-1 text-sm">
-                        <span className="text-emerald-100/40">{cmp.before.toLocaleString()}</span>
-                        <span className="mx-1.5 text-emerald-400">→</span>
-                        <b className="text-white">{cmp.after.toLocaleString()}</b>
-                      </p>
-                    </div>
-                  ))}
-                </div>
+        <div className="space-y-4">
+          <ChartCard
+            title="One-Hot Encoding"
+            subtitle="Categorical → numeric via dummy columns"
+          >
+            <div className="flex items-center justify-around py-2 text-center">
+              <div>
+                <div className="text-xl font-semibold text-white">{o.onehot.columns_before}</div>
+                <div className="text-[11px] text-emerald-100/50">columns before</div>
+              </div>
+              <Sigma className="h-5 w-5 text-emerald-300/50" />
+              <div>
+                <div className="text-xl font-semibold text-emerald-300">+{o.onehot.dummy_columns}</div>
+                <div className="text-[11px] text-emerald-100/50">dummies ({o.onehot.features_encoded.join(" · ")})</div>
+              </div>
+              <div>
+                <div className="text-xl font-semibold text-white">{o.onehot.columns_after}</div>
+                <div className="text-[11px] text-emerald-100/50">columns after</div>
+              </div>
+            </div>
+          </ChartCard>
 
-                <div className="space-y-2">
-                  {result.steps.map((step, i) => (
-                    <motion.div key={i}
-                      initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.14 }}
-                      className="flex items-start gap-3 rounded-lg border border-emerald-400/10 bg-emerald-400/[0.04] px-3.5 py-2.5">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-emerald-50/90">{step.step}</p>
-                        <p className="text-xs text-emerald-100/45">{step.detail}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-
-                <div className="mt-4">
-                  <SectionTitle>Cleaned preview (first 10 rows)</SectionTitle>
-                  <div className="max-h-56 overflow-auto rounded-lg border border-white/[0.06]">
-                    <table className="w-full text-left text-[11px]">
-                      <thead className="sticky top-0 bg-[#071b12]/95 text-emerald-200/60">
-                        <tr>
-                          {result.preview_columns.map((c) => (
-                            <th key={c} className="whitespace-nowrap px-2.5 py-2 font-medium">{c.replace(/_/g, " ")}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="text-emerald-50/75">
-                        {result.preview.map((row, i) => (
-                          <tr key={i} className="border-t border-white/[0.04]">
-                            {result.preview_columns.map((c) => (
-                              <td key={c} className="whitespace-nowrap px-2.5 py-1.5 font-mono">
-                                {typeof row[c] === "number" ? (row[c] as number).toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(row[c])}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </GlassCard>
-            )}
-          </AnimatePresence>
+          <ChartCard
+            title="Min-Max Normalisation Preview"
+            subtitle="Values rescaled to [0, 1] — fit on the training split"
+          >
+            <table className="w-full text-left text-[11px]">
+              <thead>
+                <tr className="text-emerald-100/50">
+                  <th className="px-2 py-1.5">Column</th>
+                  <th className="px-2 py-1.5 text-right">Raw (row 0)</th>
+                  <th className="px-2 py-1.5 text-right">Scaled</th>
+                  <th className="px-2 py-1.5 text-right">Min → Max</th>
+                </tr>
+              </thead>
+              <tbody>
+                {o.minmax.columns.map((c, i) => (
+                  <tr key={c} className="border-b border-white/[0.04]">
+                    <td className="px-2 py-1.5 text-emerald-100/85">{prettyName(c)}</td>
+                    <td className="px-2 py-1.5 text-right text-emerald-100/60">
+                      {Number(o.minmax.before[0]?.[c] ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-medium text-emerald-300">
+                      {Number(o.minmax.after[0]?.[c] ?? 0).toFixed(4)}
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-emerald-100/40">
+                      {o.minmax.min_[i].toLocaleString()} → {o.minmax.max_[i].toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ChartCard>
         </div>
-
-        {/* options panel */}
-        <GlassCard className="h-fit p-5 lg:sticky lg:top-24">
-          <SectionTitle>Pipeline configuration</SectionTitle>
-          {running ? (
-            <div className="flex flex-col items-center gap-3 py-10">
-              <div className="relative h-12 w-12">
-                <div className="absolute inset-0 animate-spin rounded-full border-2 border-emerald-400/20 border-t-emerald-400" />
-              </div>
-              <p className="text-sm text-emerald-100/60">Running pipeline…</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <OptionRow label="Imputation" hint="how missing cells are filled">
-                <Select value={options.missing_strategy} onValueChange={(v) => setOptions((o2) => ({ ...o2, missing_strategy: v as PipelineOptions["missing_strategy"] }))}>
-                  <SelectTrigger className="w-32 border-white/10 bg-white/[0.05] text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#0a1f16] text-emerald-50">
-                    <SelectItem value="mean">Mean</SelectItem>
-                    <SelectItem value="median">Median</SelectItem>
-                    <SelectItem value="most_frequent">Mode</SelectItem>
-                  </SelectContent>
-                </Select>
-              </OptionRow>
-              <OptionRow label="Scaling" hint="applied at training time">
-                <Select value={options.scaling} onValueChange={(v) => setOptions((o2) => ({ ...o2, scaling: v as PipelineOptions["scaling"] }))}>
-                  <SelectTrigger className="w-32 border-white/10 bg-white/[0.05] text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#0a1f16] text-emerald-50">
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="minmax">MinMax</SelectItem>
-                    <SelectItem value="robust">Robust</SelectItem>
-                    <SelectItem value="none">None</SelectItem>
-                  </SelectContent>
-                </Select>
-              </OptionRow>
-              <OptionRow label="Outliers" hint="extreme value handling">
-                <Select value={options.outlier_handling} onValueChange={(v) => setOptions((o2) => ({ ...o2, outlier_handling: v as PipelineOptions["outlier_handling"] }))}>
-                  <SelectTrigger className="w-32 border-white/10 bg-white/[0.05] text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#0a1f16] text-emerald-50">
-                    <SelectItem value="winsorize">Winsorize</SelectItem>
-                    <SelectItem value="none">Keep</SelectItem>
-                  </SelectContent>
-                </Select>
-              </OptionRow>
-              <div className="border-t border-white/[0.06] pt-3" />
-              <ToggleRow label="Drop duplicate rows" checked={options.drop_duplicates}
-                onChange={(v) => setOptions((o2) => ({ ...o2, drop_duplicates: v }))} />
-              <ToggleRow label="Drop high-missing columns" checked={options.drop_high_missing}
-                onChange={(v) => setOptions((o2) => ({ ...o2, drop_high_missing: v }))} />
-              <ToggleRow label="Save result to SQLite" checked={options.save_result}
-                onChange={(v) => setOptions((o2) => ({ ...o2, save_result: v }))} />
-
-              <Button
-                onClick={runPipeline}
-                className="mt-2 h-11 w-full gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(52,211,153,0.35)] transition hover:from-emerald-400 hover:to-teal-400"
-              >
-                <PlayCircle className="h-4.5 w-4.5" /> Run preprocessing pipeline
-              </Button>
-
-              {o && o.constant_columns.length > 0 && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-[11px] text-amber-200/80">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Constant columns detected: {o.constant_columns.join(", ")} — consider dropping before training.
-                </div>
-              )}
-            </div>
-          )}
-        </GlassCard>
       </div>
-    </div>
-  );
-}
 
-function OptionRow({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div>
-        <p className="text-[13px] font-medium text-emerald-50/85">{label}</p>
-        <p className="text-[11px] text-emerald-100/40">{hint}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
+      {/* hybrid feature selection */}
+      <SectionTitle
+        title="Hybrid Feature Selection"
+        subtitle="Section 2.2.3 — Spearman correlation + Mutual Information + RF permutation importance, validated on a time-based window"
+      />
 
-function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between">
-      <p className="text-[13px] text-emerald-50/85">{label}</p>
-      <Switch checked={checked} onCheckedChange={onChange}
-        className="data-[state=checked]:bg-emerald-500" />
+      {!pipeline ? (
+        <ChartCard title="Run the pipeline to compute the live ranking" subtitle="The button above executes the six-step chain on the real dataset">
+          <div className="flex items-center justify-center gap-2 py-10 text-sm text-emerald-100/40">
+            <Wand2 className="h-4 w-4" /> Awaiting pipeline run...
+          </div>
+        </ChartCard>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <ChartCard
+            title="Candidate Ranking (19 features)"
+            subtitle="Combined hybrid score with per-method contributions"
+            contentClassName="max-h-[420px] overflow-y-auto"
+          >
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-[#0a1f16]/90 backdrop-blur">
+                <tr className="text-emerald-100/50">
+                  <th className="px-2 py-2">#</th>
+                  <th className="px-2 py-2">Feature</th>
+                  <th className="px-2 py-2 text-right">Spearman</th>
+                  <th className="px-2 py-2 text-right">MI</th>
+                  <th className="px-2 py-2 text-right">Perm.</th>
+                  <th className="px-2 py-2 text-right">Hybrid</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ranking.map((r, i) => (
+                  <tr key={r.feature} className="border-b border-white/[0.04]">
+                    <td className="px-2 py-1.5 text-emerald-100/40">{i + 1}</td>
+                    <td className="px-2 py-1.5 font-medium text-emerald-100">{prettyName(r.feature)}</td>
+                    <td className="px-2 py-1.5 text-right text-emerald-100/60">{r.spearman}</td>
+                    <td className="px-2 py-1.5 text-right text-emerald-100/60">{r.mutual_info}</td>
+                    <td className="px-2 py-1.5 text-right text-emerald-100/60">{r.permutation}</td>
+                    <td className="px-2 py-1.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <div className="h-1.5 w-14 overflow-hidden rounded-full bg-white/[0.07]">
+                          <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"
+                            style={{ width: `${r.hybrid_score * 100}%` }} />
+                        </div>
+                        <span className="w-10 text-right font-medium text-emerald-300">{r.hybrid_score}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ChartCard>
+
+          <ChartCard
+            title="Subset Size Validation"
+            subtitle={`${pipeline.validation.validation_split.selection_train} → validation on ${pipeline.validation.validation_split.validation} (log-scale metrics)`}
+          >
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-emerald-100/50">
+                  <th className="px-2 py-2">Top-N</th>
+                  <th className="px-2 py-2 text-right">MAE</th>
+                  <th className="px-2 py-2 text-right">RMSE</th>
+                  <th className="px-2 py-2 text-right">R²</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pipeline.validation.results.map((v) => {
+                  const best = v.n_features === pipeline.validation.best.n_features;
+                  return (
+                    <tr key={v.n_features}
+                      className={`border-b border-white/[0.04] ${best ? "bg-emerald-400/[0.08]" : ""}`}>
+                      <td className="px-2 py-2">
+                        <span className={`inline-flex items-center gap-1.5 font-medium ${best ? "text-emerald-300" : "text-emerald-100/80"}`}>
+                          {best && <CheckCircle2 className="h-3.5 w-3.5" />}
+                          Top-{v.n_features}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-right text-emerald-100/65">{v.mae}</td>
+                      <td className="px-2 py-2 text-right text-emerald-100/65">{v.rmse}</td>
+                      <td className="px-2 py-2 text-right font-medium text-emerald-200">{v.r2}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="mt-3 text-[11px] leading-relaxed text-emerald-100/45">
+              Following the book, the production models pin the Top-13 subset for
+              regression (Table 4.1.1) and the Top-10 for classification. This
+              live validation window shows how each size behaves out-of-sample
+              before the final training.
+            </p>
+          </ChartCard>
+        </div>
+      )}
+
+      {runError && <ErrorPanel message={runError} onRetry={runPipeline} />}
     </div>
   );
 }

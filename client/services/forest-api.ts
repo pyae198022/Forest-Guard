@@ -1,110 +1,152 @@
-/** Typed endpoint wrappers for the ForestGuard backend. */
+/** Typed endpoint wrappers for the ForestGuard PJBook backend. */
 
 import { apiGet, apiPost, apiUpload } from "./api";
 import type {
+  ArOverview,
+  AttributeRow,
+  ClassificationRow,
   ClusterResponse,
   ColumnProfile,
+  ConfusionMatrix,
+  CorrelationData,
+  CvTable,
+  DatasetInfo,
   DatasetSummary,
-  DescriptiveStats,
-  EvaluationSummary,
+  EvalSummary,
+  Facets,
   FeatureMeta,
+  ForestRecord,
+  HistogramData,
+  ImportanceData,
+  ItemsetRow,
+  ModelOption,
   PipelineResult,
-  QualityOverview,
   PredictResult,
+  PreprocessingOverview,
+  Presets,
+  QualityReport,
+  RecordsByRegion,
   RecordsResponse,
-  VizOverview,
+  RegressionRow,
+  RocCurves,
+  RuleRow,
+  StatsRow,
+  TargetCorrelation,
+  TrendData,
+  BoxplotData,
+  RegionBoxplot,
 } from "@client/src/types";
 
-export interface PipelineOptions {
-  missing_strategy: "mean" | "median" | "most_frequent";
-  scaling: "standard" | "minmax" | "robust" | "none";
-  outlier_handling: "none" | "winsorize";
-  drop_duplicates: boolean;
-  drop_high_missing: boolean;
-  missing_threshold: number;
-  save_result: boolean;
-}
-
 export const forestApi = {
-  // dataset ----------------------------------------------------------------
+  // dataset ------------------------------------------------------------
   datasetSummary: () => apiGet<DatasetSummary>("/api/dataset/summary"),
-  datasetInfo: () => apiGet<Record<string, unknown>>("/api/dataset/info"),
+  datasetInfo: () => apiGet<DatasetInfo>("/api/dataset/info"),
+  attributes: () => apiGet<AttributeRow[]>("/api/dataset/attributes"),
+  stats: () => apiGet<StatsRow[]>("/api/dataset/stats"),
+  quality: () => apiGet<QualityReport>("/api/dataset/quality"),
+  facets: () => apiGet<Facets>("/api/dataset/facets"),
   records: (params: {
-    page?: number;
-    page_size?: number;
+    entity?: string;
     region?: string;
-    risk?: string;
-    search?: string;
+    year_min?: number;
+    year_max?: number;
+    q?: string;
     sort_by?: string;
-    sort_dir?: string;
+    order?: "asc" | "desc";
+    limit?: number;
+    offset?: number;
   }) => apiGet<RecordsResponse>("/api/dataset/records", params),
   columnProfile: (name: string) =>
-    apiGet<ColumnProfile>(`/api/dataset/column-profile/${encodeURIComponent(name)}`),
-  importCsv: (file: File) => apiUpload<{ rows_imported: number }>("/api/dataset/import", file),
-
-  // preprocessing ------------------------------------------------------------
-  qualityOverview: () => apiGet<QualityOverview>("/api/preprocessing/overview"),
-  runPipeline: (options: Partial<PipelineOptions>) =>
-    apiPost<PipelineResult>("/api/preprocessing/run", {
-      missing_strategy: "median",
-      scaling: "standard",
-      outlier_handling: "winsorize",
-      drop_duplicates: true,
-      drop_high_missing: true,
-      missing_threshold: 30,
-      save_result: true,
-      ...options,
-    }),
-  pipelineHistory: () => apiGet<unknown[]>("/api/preprocessing/history"),
-
-  // visualization --------------------------------------------------------------
-  vizOverview: () => apiGet<VizOverview>("/api/visualization/overview"),
-  histogram: (feature: string, bins = 26, groupByRisk = false) =>
-    apiGet<{ feature: string; data: { bin: string; risk?: string; count: number }[] }>(
-      "/api/visualization/histogram",
-      { feature, bins, group_by_risk: groupByRisk },
+    apiGet<ColumnProfile>(
+      `/api/dataset/column-profile/${encodeURIComponent(name)}`,
     ),
-  scatter: (x: string, y: string, sample = 700) =>
-    apiGet<{
-      x: string;
-      y: string;
-      points: { [k: string]: number | string }[];
-    }>("/api/visualization/scatter", { x, y, sample }),
-  correlation: (threshold = 0.2) =>
-    apiGet<{
-      columns: string[];
-      matrix: number[][];
-      top_pairs: { a: string; b: string; value: number }[];
-    }>("/api/visualization/correlation", { threshold }),
+  importCsv: (file: File) =>
+    apiUpload<DatasetInfo>("/api/dataset/import", file),
 
-  // descriptive mining ------------------------------------------------------
-  descriptive: () => apiGet<DescriptiveStats>("/api/mining/descriptive"),
-  groupby: (by = "region") =>
-    apiGet<{ by: string; groups: Record<string, number | string>[] }>(
-      "/api/mining/groupby",
-      { by },
+  // preprocessing --------------------------------------------------------
+  preprocessingOverview: () =>
+    apiGet<PreprocessingOverview>("/api/preprocessing/overview"),
+  runPipeline: () => apiPost<PipelineResult>("/api/preprocessing/run", {}),
+
+  // visualization ----------------------------------------------------------
+  histogram: (feature: string, bins = 28) =>
+    apiGet<HistogramData>("/api/visualization/histogram", { feature, bins }),
+  boxplot: (feature: string) =>
+    apiGet<BoxplotData>("/api/visualization/boxplot", { feature }),
+  regionBoxplot: () =>
+    apiGet<RegionBoxplot>("/api/visualization/region-boxplot"),
+  trend: () => apiGet<TrendData>("/api/visualization/trend"),
+  recordsByRegion: () =>
+    apiGet<RecordsByRegion>("/api/visualization/records-by-region"),
+  correlation: (threshold = 0.3) =>
+    apiGet<CorrelationData>("/api/visualization/correlation", { threshold }),
+  targetCorrelation: (top = 12) =>
+    apiGet<TargetCorrelation>("/api/visualization/target-correlation", { top }),
+
+  // descriptive mining ---------------------------------------------------
+  arOverview: () => apiGet<ArOverview>("/api/mining/association/overview"),
+  arItemsets: (top = 15) =>
+    apiGet<{ itemsets: ItemsetRow[] }>(
+      "/api/mining/association/itemsets",
+      { top },
     ),
-  clustering: (k = 4) => apiPost<ClusterResponse>("/api/mining/clustering", { k }),
-
-  // prediction ------------------------------------------------------------
-  predictFeatures: () => apiGet<FeatureMeta[]>("/api/prediction/features"),
-  presets: () =>
+  arScatter: () =>
     apiGet<{
-      healthy: Record<string, number>;
-      degraded: Record<string, number>;
-      healthy_region: string;
-      degraded_region: string;
-    }>("/api/prediction/presets"),
-  predict: (model: string, features: Record<string, number | string>) =>
-    apiPost<PredictResult>("/api/prediction/predict", { model, features }),
-  modelList: () =>
-    apiGet<{ key: string; name: string; kind: string }[]>("/api/prediction/models"),
+      points: { support: number; confidence: number; lift: number }[];
+    }>("/api/mining/association/scatter"),
+  arRules: (top = 10) =>
+    apiGet<{ rules: RuleRow[]; n_rules: number }>(
+      "/api/mining/association/rules",
+      { top },
+    ),
+  clustering: (k?: number) =>
+    apiPost<ClusterResponse>("/api/mining/clustering", {}, k ? { k } : undefined),
 
-  // evaluation ----------------------------------------------------------------
-  evaluation: () => apiGet<EvaluationSummary>("/api/evaluation/summary"),
-  retrain: (source: "raw" | "preprocessed") =>
-    apiPost<{ best_model: string; accuracy: Record<string, number> }>(
+  // evaluation -----------------------------------------------------------
+  evalSummary: () => apiGet<EvalSummary>("/api/evaluation/summary"),
+  regressionComparison: () =>
+    apiGet<{ rows: RegressionRow[] }>("/api/evaluation/regression-comparison"),
+  classificationComparison: () =>
+    apiGet<{ rows: ClassificationRow[] }>(
+      "/api/evaluation/classification-comparison",
+    ),
+  roc: () => apiGet<RocCurves>("/api/evaluation/roc"),
+  confusionMatrix: (model = "rf_clf_top10") =>
+    apiGet<ConfusionMatrix>("/api/evaluation/confusion-matrix", { model }),
+  crossValidation: () => apiGet<CvTable>("/api/evaluation/cross-validation"),
+  featureImportance: () =>
+    apiGet<ImportanceData>("/api/evaluation/feature-importance"),
+  featureSets: () =>
+    apiGet<{
+      baseline_all: string[];
+      top13_regression: string[];
+      top10_classification: string[];
+      ar_top10: string[];
+    }>("/api/evaluation/feature-sets"),
+  retrain: () =>
+    apiPost<{ best_model: string; trained_at: string }>(
       "/api/evaluation/retrain",
-      { source },
+      {},
     ),
+
+  // prediction -----------------------------------------------------------
+  models: () => apiGet<ModelOption[]>("/api/prediction/models"),
+  featureMeta: () =>
+    apiGet<{ features: FeatureMeta[]; target: string; classes: string[] }>(
+      "/api/prediction/features",
+    ),
+  presets: () => apiGet<Presets>("/api/prediction/presets"),
+  predict: (model: string, features: Record<string, number>) =>
+    apiPost<PredictResult>("/api/prediction/predict", { model, features }),
 };
+
+/** Faceted record fetch used by the explorer table. */
+export async function fetchRecords(
+  params: Parameters<typeof forestApi.records>[0],
+): Promise<RecordsResponse> {
+  return apiGet<RecordsResponse>("/api/dataset/records", {
+    ...params,
+  } as Record<string, string | number | boolean | undefined>);
+}
+
+export type { ForestRecord };

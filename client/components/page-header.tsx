@@ -31,12 +31,28 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
 }
 
 /** Small section label used inside pages. */
-export function SectionTitle({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+export function SectionTitle({
+  children,
+  right,
+  title,
+  subtitle,
+}: {
+  children?: React.ReactNode;
+  right?: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+}) {
+  const heading = title ?? (typeof children === "string" ? children : null);
   return (
-    <div className="mb-3 flex items-center justify-between">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-emerald-200/70">
-        {children}
-      </h2>
+    <div className="mb-3 flex items-end justify-between gap-3">
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-emerald-200/70">
+          {heading ?? children}
+        </h2>
+        {subtitle && (
+          <p className="mt-0.5 text-[11px] text-emerald-100/40">{subtitle}</p>
+        )}
+      </div>
       {right}
     </div>
   );

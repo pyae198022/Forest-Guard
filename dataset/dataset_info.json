@@ -1,175 +1,34 @@
 {
-  "name": "ForestGuard Forest Ecosystem Dataset",
-  "version": "1.0",
-  "generated_at": "2026-09-08T17:51:58.913223+00:00",
-  "n_records": 4030,
-  "n_features": 27,
-  "target": "deforestation_risk",
-  "classes": [
-    "Low",
-    "Medium",
-    "High"
+  "name": "Deforestation Data with Climate and Habitat (PJBook)",
+  "source": "University project book IS-212 \u2014 country-year panel",
+  "rows": 4030,
+  "columns": 27,
+  "numeric_columns": 25,
+  "categorical_columns": 2,
+  "year_min": 1990,
+  "year_max": 2020,
+  "entities": 130,
+  "regions": [
+    "Africa",
+    "Asia",
+    "Europe",
+    "North America",
+    "Oceania",
+    "Other/Global",
+    "South America"
   ],
-  "class_distribution": {
-    "Low": 1610,
-    "Medium": 1451,
-    "High": 969
+  "missing_values": 0,
+  "duplicate_records": 0,
+  "target": "Deforestation_Ha",
+  "split": {
+    "train": "Year <= 2015",
+    "test": "Year > 2015"
   },
-  "feature_groups": {
-    "geographic": [
-      "region",
-      "latitude",
-      "longitude",
-      "elevation_m",
-      "slope_deg"
-    ],
-    "environmental": [
-      "soil_moisture_pct",
-      "soil_ph",
-      "ndvi",
-      "canopy_cover_pct",
-      "tree_density_per_ha",
-      "biomass_tons_ha",
-      "forest_age_years"
-    ],
-    "climate": [
-      "annual_rainfall_mm",
-      "avg_temperature_c",
-      "humidity_pct",
-      "drought_index",
-      "wind_speed_kmh",
-      "solar_radiation_kwh_m2",
-      "fire_risk_index"
-    ],
-    "biodiversity": [
-      "species_richness",
-      "endemic_species_count",
-      "invasive_species_pct"
-    ],
-    "socio_economic": [
-      "population_density_per_km2",
-      "logging_intensity_index",
-      "road_proximity_km",
-      "agriculture_pressure_index",
-      "protected_area_flag"
-    ]
-  },
-  "columns": [
-    {
-      "name": "record_id",
-      "dtype": "integer"
-    },
-    {
-      "name": "region",
-      "dtype": "categorical"
-    },
-    {
-      "name": "latitude",
-      "dtype": "float"
-    },
-    {
-      "name": "longitude",
-      "dtype": "float"
-    },
-    {
-      "name": "elevation_m",
-      "dtype": "float"
-    },
-    {
-      "name": "slope_deg",
-      "dtype": "float"
-    },
-    {
-      "name": "soil_moisture_pct",
-      "dtype": "float"
-    },
-    {
-      "name": "soil_ph",
-      "dtype": "float"
-    },
-    {
-      "name": "ndvi",
-      "dtype": "float"
-    },
-    {
-      "name": "canopy_cover_pct",
-      "dtype": "float"
-    },
-    {
-      "name": "tree_density_per_ha",
-      "dtype": "float"
-    },
-    {
-      "name": "biomass_tons_ha",
-      "dtype": "float"
-    },
-    {
-      "name": "forest_age_years",
-      "dtype": "float"
-    },
-    {
-      "name": "annual_rainfall_mm",
-      "dtype": "float"
-    },
-    {
-      "name": "avg_temperature_c",
-      "dtype": "float"
-    },
-    {
-      "name": "humidity_pct",
-      "dtype": "float"
-    },
-    {
-      "name": "drought_index",
-      "dtype": "float"
-    },
-    {
-      "name": "wind_speed_kmh",
-      "dtype": "float"
-    },
-    {
-      "name": "solar_radiation_kwh_m2",
-      "dtype": "float"
-    },
-    {
-      "name": "fire_risk_index",
-      "dtype": "float"
-    },
-    {
-      "name": "species_richness",
-      "dtype": "float"
-    },
-    {
-      "name": "endemic_species_count",
-      "dtype": "integer"
-    },
-    {
-      "name": "invasive_species_pct",
-      "dtype": "float"
-    },
-    {
-      "name": "population_density_per_km2",
-      "dtype": "float"
-    },
-    {
-      "name": "logging_intensity_index",
-      "dtype": "float"
-    },
-    {
-      "name": "road_proximity_km",
-      "dtype": "float"
-    },
-    {
-      "name": "agriculture_pressure_index",
-      "dtype": "float"
-    },
-    {
-      "name": "protected_area_flag",
-      "dtype": "integer"
-    },
-    {
-      "name": "deforestation_risk",
-      "dtype": "categorical"
-    }
+  "leakage_excluded": [
+    "CO2_Emissions_Mt",
+    "Lost_Carbon_Sink_kt",
+    "PM25_Emissions_Tons",
+    "PM10_Emissions_Tons",
+    "Environmental_Impact_Score"
   ]
 }

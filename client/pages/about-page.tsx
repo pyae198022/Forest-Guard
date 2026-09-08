@@ -1,153 +1,225 @@
 "use client";
 
 import {
-  BrainCircuit, Database, LineChart, Server, Workflow,
+  BookOpen,
+  CheckCircle2,
+  Cpu,
+  Database,
+  GraduationCap,
+  Layers,
+  Radar,
+  Server,
+  TriangleAlert,
 } from "lucide-react";
 import { PageHeader, SectionTitle } from "@client/components/page-header";
-import { GlassCard } from "@client/components/glass-card";
-import { LeafPattern, Logo } from "@client/assets/logo";
-import { useApi } from "@client/hooks/use-api";
-import { forestApi } from "@client/services/forest-api";
-import type { DatasetSummary } from "@client/src/types";
-
-const PIPELINE_STEPS = [
-  { icon: Database, title: "Data Collection", desc: "4,030 synthetic forest-plot records across 6 ecoregions, generated with realistic multivariate relationships and stored in SQLite." },
-  { icon: Workflow, title: "Preprocessing", desc: "Duplicate removal, median imputation, IQR-based outlier winsorization, type optimization and one-hot encoding of the categorical region feature." },
-  { icon: LineChart, title: "EDA & Mining", desc: "Descriptive statistics, Pearson correlation analysis, distribution studies and K-Means clustering with PCA projection." },
-  { icon: BrainCircuit, title: "Modeling", desc: "Five supervised classifiers trained on an 80/20 stratified split with a sklearn ColumnTransformer pipeline (impute → scale → encode)." },
-  { icon: Server, title: "Evaluation", desc: "Accuracy, macro precision/recall/F1, ROC-AUC (OvR), 5-fold cross-validation, confusion matrices and feature importance — all benchmarked in the dashboard." },
-];
-
-const STACK = [
-  { group: "Frontend", items: ["React 19", "TypeScript 5", "Next.js 16", "Tailwind CSS 4", "shadcn/ui", "Recharts", "Framer Motion"] },
-  { group: "Backend", items: ["Python 3.12", "FastAPI", "Pandas", "NumPy", "scikit-learn", "Joblib", "Uvicorn"] },
-  { group: "Data", items: ["SQLite", "CSV import/export", "synthetic generator", "4,030 × 27 dataset"] },
-];
-
-const LEARNING = [
-  "Designing a realistic multivariate dataset with embedded class signal",
-  "Building an end-to-end data-mining pipeline (SQL → cleaning → mining → modeling)",
-  "Comparing classifier families fairly with cross-validated metrics",
-  "Explaining predictions with sensitivity-based feature attribution",
-  "Serving ML through a typed REST API consumed by a modern dashboard",
-];
+import { ChartCard } from "@client/charts/chart-card";
 
 export function AboutPage() {
-  const summary = useApi<DatasetSummary>(() => forestApi.datasetSummary(), []);
-  const s = summary.data;
-
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
-        title="About ForestGuard AI"
-        description="A full-stack data-mining project: from synthetic dataset design to an explainable machine-learning API and a premium analytics dashboard."
+        title="About This Project"
+        description="ForestGuard AI is the interactive companion of the IS-212 Data & Knowledge Mining project book — 'Deforestation Data with Climate and Habitat' — implementing every chapter of its methodology as a live, reproducible web application."
+        actions={
+          <span className="glass-chip inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-emerald-200/80">
+            <GraduationCap className="h-3.5 w-3.5 text-emerald-300" /> Semester IX · IS-212
+          </span>
+        }
       />
 
-      {/* hero */}
-      <GlassCard className="relative overflow-hidden p-6 md:p-8">
-        <LeafPattern className="absolute -right-4 top-0 opacity-70" />
-        <div className="relative flex flex-col gap-5 md:flex-row md:items-center">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
-            <Logo size={56} />
-          </div>
-          <div className="max-w-2xl">
-            <h2 className="text-xl font-semibold text-white">
-              Forest intelligence for a data-driven world
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-emerald-100/60">
-              ForestGuard AI monitors forest plots worldwide and classifies their
-              <b className="text-emerald-200"> deforestation risk</b> (Low / Medium / High) from
-              27 environmental, climate, biodiversity and socio-economic features. The project covers the
-              complete data-mining lifecycle — collection, cleaning, exploratory analysis, descriptive
-              mining, supervised modeling, evaluation and deployment — wrapped in a glassmorphism
-              analytics UI.
-            </p>
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* dataset card */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <GlassCard className="p-5 md:col-span-1">
-          <SectionTitle>Dataset</SectionTitle>
-          <div className="space-y-2.5 text-sm">
-            <Row k="Records" v={(s?.n_rows ?? 4030).toLocaleString()} />
-            <Row k="Features" v="27" />
-            <Row k="Target" v="deforestation_risk" />
-            <Row k="Classes" v="Low · Medium · High" />
-            <Row k="Storage" v="SQLite + CSV" />
-            <Row k="Regions" v="6 ecoregions" />
-          </div>
-          <p className="mt-3 border-t border-white/[0.06] pt-3 text-[11px] leading-relaxed text-emerald-100/40">
-            The synthetic generator embeds real-world causal structure: vegetation health responds to
-            climate and human pressure, and the risk label emerges from the same drivers — so models
-            learn genuine patterns rather than noise.
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <ChartCard
+          title="Project Background"
+          subtitle="Chapter 1.1 — why this problem matters"
+          className="xl:col-span-2"
+        >
+          <p className="text-sm leading-relaxed text-emerald-100/70">
+            The rapid loss of forests damages ecological balance, accelerates
+            biodiversity decline and undermines climate stability. Traditional
+            assessment methods cannot make proactive predictions, so this
+            project applies data mining techniques — association rule mining,
+            K-Means clustering, Random Forests and neural networks — to a
+            31-year country-level panel (1990-2020) in order to forecast
+            deforestation trends and rank their drivers before critical
+            thresholds are crossed.
           </p>
-        </GlassCard>
-
-        {/* pipeline */}
-        <GlassCard className="p-5 md:col-span-2">
-          <SectionTitle>Data-Mining Pipeline</SectionTitle>
-          <div className="space-y-3">
-            {PIPELINE_STEPS.map((step, i) => (
-              <div key={step.title} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] p-2">
-                    <step.icon className="h-4 w-4 text-emerald-300" />
-                  </div>
-                  {i < PIPELINE_STEPS.length - 1 && <div className="mt-1 w-px flex-1 bg-gradient-to-b from-emerald-400/30 to-transparent" />}
-                </div>
-                <div className="pb-2">
-                  <p className="text-[13px] font-semibold text-emerald-50/90">
-                    <span className="mr-1.5 text-emerald-400/60">{i + 1}.</span>{step.title}
-                  </p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-emerald-100/50">{step.desc}</p>
-                </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
+            {[
+              { icon: Database, label: "4,030", sub: "records" },
+              { icon: Layers, label: "27", sub: "attributes" },
+              { icon: Radar, label: "31", sub: "years covered" },
+              { icon: Cpu, label: "10", sub: "trained models" },
+            ].map((s) => (
+              <div key={s.sub} className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 text-center">
+                <s.icon className="mx-auto mb-1.5 h-4 w-4 text-emerald-300/70" />
+                <div className="text-lg font-semibold text-white">{s.label}</div>
+                <div className="text-[10px] text-emerald-100/45">{s.sub}</div>
               </div>
             ))}
           </div>
-        </GlassCard>
+        </ChartCard>
+
+        <ChartCard title="Objectives" subtitle="Chapter 1.2">
+          <ul className="space-y-2.5 text-xs leading-relaxed text-emerald-100/65">
+            {[
+              "Identify trends associated with deforestation by preprocessing and analysing historical environmental and climatic variables.",
+              "Investigate the performance impact of feature engineering on prediction models.",
+              "Use time-based data splitting for reliable regression and classification while avoiding data leakage.",
+              "Assess models with feature rankings and comprehensive metrics to identify the main causes of deforestation.",
+            ].map((o, i) => (
+              <li key={i} className="flex gap-2">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/70" />
+                {o}
+              </li>
+            ))}
+          </ul>
+        </ChartCard>
       </div>
 
-      {/* stack */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        {STACK.map((s2) => (
-          <GlassCard key={s2.group} className="p-5">
-            <SectionTitle>{s2.group}</SectionTitle>
-            <div className="flex flex-wrap gap-1.5">
-              {s2.items.map((it) => (
-                <span key={it} className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-[11px] text-emerald-100/70">
-                  {it}
-                </span>
+      <SectionTitle
+        title="Methodology Pipeline"
+        subtitle="How the project book maps onto this application"
+      />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            ch: "Ch. 2.1-2.2",
+            t: "Data Preparation",
+            pts: [
+              "4,030 × 27 panel · zero missing · zero duplicates",
+              "log1p on 5 skewed features (skew ≈ 10.6)",
+              "One-hot encoding of Entity / Region",
+              "Min-Max scaling fit on the training split",
+              "Hybrid feature ranking (Spearman + MI + permutation)",
+            ],
+          },
+          {
+            ch: "Ch. 2.3 / 3.1",
+            t: "Exploration & Mining",
+            pts: [
+              "Distributions, box plots, outliers per feature",
+              "Global trend 1990-2020 and regional spreads",
+              "Apriori rules: qcut Low/Medium/High bins",
+              "support ≥ 0.10 · confidence ≥ 0.60 · lift ranking",
+              "K-Means K = 2…10 selected by silhouette",
+            ],
+          },
+          {
+            ch: "Ch. 3.2",
+            t: "Predictive Modelling",
+            pts: [
+              "Strict temporal split: train ≤ 2015, test > 2015",
+              "Leakage filter on 5 target-derived columns",
+              "RF regression baseline & Top-13 (Table 4.1.1)",
+              "MLP regressor/classifier baselines & optimised",
+              "Binary risk target via train-median threshold",
+            ],
+          },
+          {
+            ch: "Ch. 4",
+            t: "Evaluation",
+            pts: [
+              "MAE / RMSE / R² in hectares (inverse log1p)",
+              "Accuracy, Balanced Accuracy, Macro-P/R/F1",
+              "ROC curves + AUC per classifier",
+              "Confusion matrices on the 2016-2020 window",
+              "5-fold CV on the training period only",
+            ],
+          },
+        ].map((c) => (
+          <div key={c.ch} className="rounded-2xl border border-white/10 bg-white/[0.05] p-4 backdrop-blur-xl">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/70">{c.ch}</div>
+            <div className="mb-2 mt-0.5 text-sm font-semibold text-white">{c.t}</div>
+            <ul className="space-y-1.5 text-[11px] leading-relaxed text-emerald-100/55">
+              {c.pts.map((pt) => (
+                <li key={pt} className="flex gap-1.5">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-emerald-400/60" />
+                  {pt}
+                </li>
               ))}
-            </div>
-          </GlassCard>
+            </ul>
+          </div>
         ))}
       </div>
 
-      {/* learning outcomes */}
-      <GlassCard className="mt-4 p-5">
-        <SectionTitle>Learning Outcomes</SectionTitle>
-        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-          {LEARNING.map((l, i) => (
-            <div key={i} className="flex items-start gap-2.5 rounded-lg border border-white/[0.05] bg-white/[0.03] px-3 py-2.5">
-              <span className="mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-[10px] font-bold text-emerald-300">
-                {i + 1}
-              </span>
-              <p className="text-[13px] leading-relaxed text-emerald-100/65">{l}</p>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-    </div>
-  );
-}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Advantages"
+          subtitle="Chapter 5.1"
+        >
+          <ul className="space-y-2 text-xs leading-relaxed text-emerald-100/65">
+            {[
+              ["Proactive environmental management", "risk zones and causal drivers surface before thresholds are crossed."],
+              ["Target-leakage prevention", "temporal split plus exclusion of CO₂ / carbon-sink / PM-emission features."],
+              ["High predictive accuracy", "RF Top-13 regression reaches R² ≈ 0.97; the Top-10 classifier exceeds 98% accuracy with AUC ≈ 0.999."],
+              ["Comprehensive mining", "descriptive (Apriori + K-Means) and predictive (RF + MLP) views of the same panel."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-2">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/70" />
+                <span><span className="font-medium text-emerald-100">{t}</span> — {d}</span>
+              </li>
+            ))}
+          </ul>
+        </ChartCard>
 
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-center justify-between border-b border-white/[0.05] pb-1.5">
-      <span className="text-xs text-emerald-100/45">{k}</span>
-      <span className="font-mono text-[13px] text-emerald-100/85">{v}</span>
+        <ChartCard
+          title="Limitations"
+          subtitle="Chapter 5.2"
+        >
+          <ul className="space-y-2 text-xs leading-relaxed text-emerald-100/65">
+            {[
+              ["Geographical imbalance", "Other/Global aggregates dominate the panel, limiting localised predictions."],
+              ["Association-rule granularity", "quantile bins struggle to filter a continuous target as granular as hectares."],
+              ["Historical basis", "models learn patterns up to 2015; unforeseen ecological or policy shifts fall outside their scope."],
+              ["NN variance", "multi-layer perceptrons are sensitive to scaling and seed choices, explaining their wider metric spread."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-2">
+                <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400/70" />
+                <span><span className="font-medium text-emerald-100">{t}</span> — {d}</span>
+              </li>
+            ))}
+          </ul>
+        </ChartCard>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard title="Technology Stack" subtitle="Everything runs locally in this sandbox">
+          <div className="space-y-3 text-xs">
+            {[
+              ["Frontend", "Next.js 16 · React 19 · TypeScript · Tailwind CSS · shadcn/ui · Recharts · Framer Motion"],
+              ["Backend", "Python 3.12 · FastAPI · scikit-learn (RF, MLP, K-Means, metrics) · pandas · NumPy · Joblib"],
+              ["Storage", "SQLite (raw mirror + run history) · canonical CSV export of the Excel source"],
+              ["Mining", "Hand-rolled Apriori frequent itemsets with support / confidence / lift / leverage / conviction"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                <span className="w-20 shrink-0 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-300/70">{k}</span>
+                <span className="leading-relaxed text-emerald-100/60">{v}</span>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+
+        <ChartCard title="References" subtitle="From the project book">
+          <ol className="list-inside list-decimal space-y-1.5 text-[11px] leading-relaxed text-emerald-100/55">
+            <li>FAO — Global Forest Resources Assessment (2020)</li>
+            <li>The World Bank — World Development Indicators</li>
+            <li>IUCN Red List of Threatened Species</li>
+            <li>WRI / Global Forest Watch — forest loss monitoring</li>
+            <li>Han, Kamber & Pei — Data Mining: Concepts and Techniques (3rd ed.)</li>
+            <li>Coursera — Random Forest overview</li>
+          </ol>
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.05] p-3 text-[11px] text-emerald-200/70">
+            <BookOpen className="h-4 w-4 shrink-0" />
+            Advisor: Professor Dr. Daw Hus Myat Mo · University of Computer
+            Studies, Yangon (UCSY)
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-[11px] text-emerald-100/40">
+            <Server className="h-3.5 w-3.5" />
+            API base: FastAPI on :3010 — every figure on this site is computed
+            live from the uploaded dataset.
+          </div>
+        </ChartCard>
+      </div>
     </div>
   );
 }

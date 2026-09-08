@@ -1,129 +1,103 @@
-# ForestGuard AI — Forest Ecosystem Data Mining Platform
+# ForestGuard AI — PJBook Edition 🌲
 
-A full-stack data-mining application that monitors **4,030 forest plots** across 6 global
-ecoregions and classifies their **deforestation risk** (Low / Medium / High) from
-**27 environmental, climate, biodiversity and socio-economic features**.
-
-Built as a university Data Mining project covering the complete mining lifecycle:
-collection → preprocessing → exploratory analysis → descriptive mining → supervised
-modeling → evaluation → deployment.
-
-![stack](https://img.shields.io/badge/React_19-Next.js_16-10b981)
-![ml](https://img.shields.io/badge/scikit--learn-FastAPI-84cc16)
-![db](https://img.shields.io/badge/SQLite-CSV-teal)
-
----
-
-## Folder Structure
-
-```
-forestguard-ai/
-├── client/                     # React frontend modules
-│   ├── src/                    #   types, theme tokens, navigation config
-│   ├── components/             #   reusable UI (app shell, glass cards, stat cards, badges…)
-│   ├── pages/                  #   the 8 page views (one module each)
-│   ├── charts/                 #   Recharts wrappers (donut, radar, ROC, heatmap…)
-│   ├── hooks/                  #   useApi data-fetching hook
-│   ├── services/               #   typed API client (XTransformPort gateway)
-│   └── assets/                 #   logo & decorative SVGs
-│
-├── server/                     # Python FastAPI mini-service (port 3010)
-│   ├── app.py                  #   app factory, lifespan bootstrap, health
-│   ├── routes/                 #   dataset / preprocessing / visualization / mining / prediction / evaluation
-│   ├── ml/                     #   feature config, pipelines, training, evaluation, predictor
-│   ├── models/                 #   persisted joblib artifacts + state.json
-│   ├── database/               #   SQLite layer (raw table, run history) + seeder
-│   └── utils/                  #   config, response envelope, dataset generator
-│
-├── dataset/                    # forestguard_dataset.csv + dataset_info.json
-├── scripts/                    # start_ml.sh (resilient backend starter)
-└── README.md
-```
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, TypeScript 5, Next.js 16 (App Router), Tailwind CSS 4, shadcn/ui, Recharts, Framer Motion |
-| Backend | Python 3.12, FastAPI, Uvicorn, Pydantic |
-| Data / ML | Pandas, NumPy, scikit-learn, Joblib |
-| Storage | SQLite (raw + preprocessed tables, run history) and CSV import/export |
-
-## Application Pages
-
-1. **Dashboard** — KPI cards, risk donut, ecoregion stacked bars, vegetation gradient, region radar
-2. **Dataset Explorer** — paginated table with search/region/risk filters, per-column profiles, CSV import/export
-3. **Data Preprocessing** — quality audit (missing, duplicates, IQR outliers), configurable pipeline, before/after comparison, persisted to SQLite
-4. **Data Visualization** — tabbed gallery: histograms, risk scatter, correlation heatmap, composition charts
-5. **Descriptive Mining** — full describe() table, skewness panel, region aggregates, top correlations, K-Means + PCA projection with silhouette score
-6. **AI Prediction** — 27-feature interactive form (presets, sliders), 5 models, per-class probabilities, sensitivity-based explanations
-7. **Model Evaluation** — leaderboard, grouped metric bars, per-class precision/recall, ROC (OvR), feature importance, confusion matrix, one-click retraining (raw or preprocessed)
-8. **About Project** — methodology, pipeline diagram, tech stack, learning outcomes
+Interactive, full-stack companion to the **IS-212 Data & Knowledge Mining
+project book** *"Deforestation Data with Climate and Habitat"* (Semester IX,
+University of Computer Studies, Yangon). Every chapter of the book's
+methodology is implemented as a live, reproducible web application.
 
 ## Dataset
 
-- **4,030 records × 27 features** (synthetic generator with realistic causal structure)
-- Feature groups: Geographic (5), Environmental (7), Climate (7), Biodiversity (3), Socio-economic (5)
-- Target: `deforestation_risk` — Low 40% / Medium 36% / High 24%
-- Injected imperfections for the preprocessing module: ~0.9 % missing cells, 20 duplicate rows, outliers in elevation/rainfall/population
-- Regenerate: `python3 -m server.utils.dataset_generator`
+`Deforestation_Data_With_Climate_And_Habitat.xlsx` — a **4,030 × 27
+country-year panel (1990-2020, 130 countries, 7 regions)** with 25 numeric
+and 2 categorical attributes. Zero missing values, zero duplicates. Target:
+`Deforestation_Ha`. The Excel file is mirrored into a canonical CSV
+(`dataset/forestguard_dataset.csv`) and SQLite at boot.
 
-## Model Performance (80/20 stratified split, 5-fold CV)
+## Methodology (project-book faithful)
 
-| Model | Accuracy | F1 (macro) | ROC-AUC (OvR) |
-|---|---|---|---|
-| Logistic Regression | **90.6 %** | 0.904 | 0.983 |
-| Gradient Boosting | 89.7 % | 0.897 | 0.978 |
-| Random Forest | 86.9 % | 0.868 | 0.969 |
-| K-Nearest Neighbors | 82.6 % | 0.821 | 0.948 |
-| Decision Tree | 78.9 % | 0.781 | 0.887 |
+| Book chapter | Implementation |
+|---|---|
+| 2.1 Dataset & statistics | Attribute dictionary (Table 2.1.1), descriptive stats (2.1.2), quality report (2.1.3) |
+| 2.2.1 Missing values | Audit only — the panel ships complete |
+| 2.2.2 Transformation | `log1p` on the 5 skewed features (skew ≈ 10.6) · one-hot `Entity`/`Region` |
+| 2.2.3 Feature selection | Hybrid ranking: Spearman + Mutual Information + RF permutation importance; subset sizes 5/8/10/12/15 validated on a 2012-2015 window; production models pin the book's Table 4.1.1 **Top-13** (regression) / **Top-10** (classification) |
+| 2.2.4 Normalisation | Min-Max scaling fit on the training split only |
+| 2.3 Visualisation | Distributions + skewness, box plots + IQR outliers, per-region spread, global trend, records-by-region, correlation heat-map, target correlations |
+| 3.1.1 Association rules | Hand-rolled Apriori: `pd.qcut` Low/Medium/High bins, target excluded, support ≥ 0.10, confidence ≥ 0.60, lift / leverage / conviction |
+| 3.1.2 Clustering | K-Means (random_state 42, n_init 10) over 10 book features, K = 2…10 by inertia + silhouette (optimum K = 2), PCA scatter, profiles, IF-THEN rules |
+| 3.2 Modelling | **Strict temporal split: train ≤ 2015, test > 2015** (no shuffling). Leakage filter drops `CO2_Emissions_Mt`, `Lost_Carbon_Sink_kt`, `PM25_Emissions_Tons`, `PM10_Emissions_Tons` (plus EIS from the candidate pool). RF + MLP regressors/classifiers, regression trained on `log1p` target |
+| Ch. 4 Evaluation | MAE / RMSE / R² in hectares, Accuracy / Balanced Accuracy / Macro-P/R/F1, ROC-AUC, confusion matrices, 5-fold CV (training split only) |
 
-Each prediction is explained with **finite-difference sensitivity analysis**: the change in
-predicted-class probability caused by a small increase in each feature (top-5 shown).
+### Reproduction highlights (live run vs book)
 
-## Running Locally
+| Metric | This app | Book |
+|---|---|---|
+| RF classification baseline accuracy / macro-F1 | **0.9846 / 0.9845** | 0.9846 / 0.9845 |
+| MLP classifier (Top-10) accuracy | **0.9754** | 0.9754 |
+| RF Top-13 regression MAE / R² | 16,572 ha / 0.9717 | 16,269 ha / 0.9747 |
+| RF baseline regression MAE / R² | 17,350 ha / 0.9730 | 17,268 ha / 0.9692 |
+| ROC-AUC (RF classifier Top-10) | 0.9987 | 0.9988 |
+| Frequent itemset `Species_Habitat_Loss_Pct_Low` support | 0.9221 | 0.922 |
+| K-Means optimum K / silhouette | 2 / ≈0.24 | 2 / 0.2520 |
+
+The evaluation UI shows **live values side-by-side with the book's reported
+numbers** for full transparency.
+
+## Architecture
+
+```
+forestguard-ai/
+├── client/                  # frontend modules (mounted by the Next.js app)
+│   ├── components/          # AppShell, glass cards, stat cards
+│   ├── pages/               # the 8 PJBook-aligned pages
+│   ├── charts/              # Recharts components (box plot, ROC, heatmap…)
+│   ├── services/            # typed FastAPI client
+│   ├── hooks/               # useApi fetch hook
+│   └── src/                 # navigation, theme, types
+├── server/                  # Python FastAPI micro-service (port 3010)
+│   ├── app.py               # lifespan: seed -> train -> warm caches
+│   ├── routes/              # dataset / preprocessing / visualization /
+│   │                        # mining / prediction / evaluation
+│   ├── ml/                  # config · preprocessing · associate (Apriori)
+│   │                        # cluster (K-Means) · models (RF + MLP + CV)
+│   ├── database/            # Excel -> CSV/SQLite seeding, run history
+│   ├── models/              # joblib artefacts + state.json
+│   └── utils/               # paths, response envelope
+├── dataset/                 # uploaded Excel + canonical CSV + info JSON
+├── src/app/page.tsx         # Next.js 16 SPA entry (React 19)
+└── scripts/start_ml.sh      # resilient backend starter
+```
+
+**Stack** — Next.js 16 · React 19 · TypeScript · Tailwind CSS · shadcn/ui ·
+Recharts · Framer Motion · Python 3.12 · FastAPI · scikit-learn · pandas ·
+NumPy · Joblib · SQLite.
+
+## Pages
+
+1. **Dashboard** — panel KPIs, temporal split, class balance, trend, champions
+2. **Dataset Explorer** — quality report, faceted record browser, attribute
+   dictionary, column profiles, Table 2.1.2 statistics
+3. **Data Preprocessing** — six-step pipeline with live hybrid ranking and
+   temporal subset validation (cached server-side, instant reruns)
+4. **Data Visualization** — the complete Figure 2.3 set, interactive
+5. **Descriptive Mining** — Apriori itemsets / rules / lift scatter + K-Means
+   K-selection, PCA scatter, cluster profiles
+6. **AI Prediction** — 20-slider scenario console, Low/High-risk presets,
+   regression (hectares) and Low/High classification with the trained models
+7. **Model Evaluation** — regression & classification leaderboards vs book
+   benchmarks, ROC curves, confusion matrices, 5-fold CV, importances, findings
+8. **About Project** — book summary, objectives, methodology map, advantages,
+   limitations, references
+
+## Running
 
 ```bash
-# 1. Frontend + backend (ML service auto-starts with the dev server)
-bun install
-bun run dev            # Next.js on :3000, FastAPI on :3010
-
-# 2. Manual backend start (optional)
-bash scripts/start_ml.sh
-python3 -m uvicorn server.app:app --port 3010
+python3 -m uvicorn server.app:app --host 0.0.0.0 --port 3010   # backend
+bun run dev                                                    # frontend :3000
 ```
 
-The frontend calls the Python service through the gateway using relative paths with
-`?XTransformPort=3010`; no CORS or absolute URLs involved.
-
-## API Overview
-
-```
-GET  /health                                  service + model status
-GET  /api/dataset/summary                     schema, missing, duplicates, class balance
-GET  /api/dataset/records                     pagination + region/risk/search filters
-GET  /api/dataset/column-profile/{name}       stats + histogram bins
-POST /api/dataset/import                      CSV upload (multipart)
-GET  /api/dataset/export                      CSV download
-GET  /api/preprocessing/overview              quality audit
-POST /api/preprocessing/run                   execute cleaning pipeline
-GET  /api/visualization/overview              chart-ready aggregates
-GET  /api/visualization/histogram|scatter|correlation
-GET  /api/mining/descriptive                  describe() + correlations + outliers
-POST /api/mining/clustering                   K-Means + PCA projection
-GET  /api/prediction/features|presets         form metadata
-POST /api/prediction/predict                  single inference + explanations
-GET  /api/evaluation/summary                  per-model metrics
-GET  /api/evaluation/roc|confusion-matrix|feature-importance
-POST /api/evaluation/retrain                  retrain (raw | preprocessed)
-```
-
-## Methodology Notes
-
-- The synthetic generator embeds a latent risk score driven by vegetation health (NDVI),
-  human pressure (logging/agriculture), climate stress (drought, fire risk) and protection
-  status — so classifiers learn genuine structure rather than noise.
-- Preprocessing mirrors training: the sklearn `ColumnTransformer` (impute → scale → one-hot)
-  guarantees the same transformations at inference time.
-- Class weights are balanced for tree/linear models to counter the moderate class imbalance.
-- All metrics are computed on a held-out stratified test set, with 5-fold CV reported as mean ± std.
+First boot imports the Excel panel, trains the full model suite (~2.5 min
+incl. 5-fold CV) and persists joblib artefacts + `state.json`; subsequent
+boots restore instantly. In local dev, `next.config.ts` rewrites `/api/*` and
+`/health` to :3010; on the sandbox preview domain the gateway's
+`?XTransformPort=3010` performs the same routing.
