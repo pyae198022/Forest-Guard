@@ -14,24 +14,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "ForestGuard AI — Data Mining Dashboard",
+  description:
+    "Full-stack data mining application for forest ecosystem monitoring: dataset exploration, preprocessing, visualization, descriptive mining, AI deforestation-risk prediction and model evaluation.",
+  keywords: ["ForestGuard", "data mining", "deforestation", "machine learning", "scikit-learn", "dashboard", "university project"],
+  authors: [{ name: "ForestGuard AI Project" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "data:image/svg+xml," + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path d="M24 3L41 9.5V22c0 10.5-7.2 19.4-17 23C14.2 41.4 7 32.5 7 22V9.5L24 3z" fill="%2310b981"/></svg>',
+    ),
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "ForestGuard AI",
+    description: "Forest ecosystem intelligence — data mining dashboard",
     type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
   },
 };
 
