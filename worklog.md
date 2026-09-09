@@ -59,3 +59,22 @@ Stage Summary:
 - App now = faithful interactive implementation of the IS-212 project book on the real uploaded dataset
 - Deliverables: Next.js :3000 (8 pages) + FastAPI :3010 (31 endpoints), dataset/{Excel copy, canonical CSV, info.json}, server/models/{joblib, state.json}, README.md
 - Verification evidence: logs/v-*.png screenshots (dashboard, explorer, preproc, viz, mining, predict, eval, about, mobile)
+
+---
+Task ID: 3
+Agent: main (Super Z)
+Task: Final end-to-end smoke test of the rebuilt PJBook backend + live browser verification
+
+Work Log:
+- Wrote scripts/smoke_final.py: comprehensive smoke test across all 6 route modules (dataset, preprocessing, visualization, mining, prediction, evaluation)
+- First run 18/29 pass; the 11 "failures" were stale guessed paths from the pre-rebuild API (e.g. /mining/descriptive, /viz/scatter) — corrected against actual @router definitions
+- 3 residual 404s were correct server behaviour: test used non-existent column Forest_Loss_Ha_Mean; real target is Deforestation_Ha — fixed test, not code
+- Verified predict response structure: regression -> {predicted_deforestation_ha, implied_risk}; classifier -> {prediction, confidence, probabilities[{class,probability}], dist}
+- Final result: 35/35 endpoints PASS (200 + success:true)
+- Browser verification (agent-browser): Dashboard (KPIs 4030 rows / 3380-650 temporal split / 98.46% best classifier, trend chart live), AI Prediction (high-risk preset -> Predict -> 49,493.5 ha implied risk High, full 20-slider scenario console), Model Evaluation (champions + This-run-vs-Book comparison table), Descriptive Mining (57 basket items, 2676 itemsets, 4178 rules, Species_Habitat_Loss_Pct:Low 92.2% = book value)
+- Zero page errors, zero console errors; browser closed cleanly
+
+Stage Summary:
+- App fully verified end-to-end after PJBook rebuild: 35/35 API endpoints green, 4 key pages re-verified live in browser (8/8 verified across sessions)
+- Book reproduction confirmed in UI: RF classifier 98.46% acc (book 98.46%), Apriori top itemset support 92.2% (book 92.2%)
+- Deliverable ready: Next.js :3000 (8 pages) + FastAPI :3010 (31 usable endpoints)
