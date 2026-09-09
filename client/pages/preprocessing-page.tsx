@@ -52,7 +52,7 @@ export function PreprocessingPage() {
     <div className="space-y-5">
       <PageHeader
         title="Data Preprocessing"
-        description="Chapter 2.2 — a systematic pipeline that turns the raw panel into a model-ready matrix: quality audit, log1p variance stabilisation, one-hot encoding, Min-Max normalisation and hybrid feature selection under anti-leakage rules."
+        description="Transform raw data into a model-ready matrix in six guided steps: quality audit, skew correction, categorical encoding, scaling, feature ranking and a time-aware validation — all with strict rules to prevent information leakage."
         actions={
           <Button
             onClick={runPipeline}
@@ -68,12 +68,12 @@ export function PreprocessingPage() {
       {/* step timeline */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {(pipeline?.steps ?? [
-          { step: 1, name: "Data quality audit (2.2.1)", detail: `${o.quality.total_records} records × ${o.quality.total_attributes} attributes · missing = ${o.quality.missing_values} · duplicates = ${o.quality.duplicate_records}` },
-          { step: 2, name: "log1p transform (2.2.2)", detail: "Applied to the 5 highly skewed features (skew ≈ 10.6)" },
-          { step: 3, name: "One-hot encoding (2.2.2)", detail: `${o.onehot.features_encoded.join(", ")} → +${o.onehot.dummy_columns} dummy columns` },
-          { step: 4, name: "Min-Max scaling (2.2.4)", detail: "Fit on the training split only — no future information" },
-          { step: 5, name: "Hybrid feature ranking (2.2.3)", detail: "Spearman + Mutual Information + RF permutation importance" },
-          { step: 6, name: "Temporal subset validation", detail: "Subset sizes 5/8/10/12/15 tested on the 2012-2015 window" },
+          { step: 1, name: "Data quality audit", detail: `${o.quality.total_records} records × ${o.quality.total_attributes} attributes · missing = ${o.quality.missing_values} · duplicates = ${o.quality.duplicate_records}` },
+          { step: 2, name: "Skew correction (log1p)", detail: "Compresses extreme values in the 5 most skewed features so models aren't dominated by outliers" },
+          { step: 3, name: "One-hot encoding", detail: `${o.onehot.features_encoded.join(", ")} → +${o.onehot.dummy_columns} numeric dummy columns` },
+          { step: 4, name: "Min-Max scaling", detail: "All features rescaled to [0, 1] — fitted on training data only, never the future" },
+          { step: 5, name: "Hybrid feature ranking", detail: "Three methods vote: correlation, information gain and permutation importance" },
+          { step: 6, name: "Subset size validation", detail: "Feature counts 5/8/10/12/15 compared on a hold-out window to find the best size" },
         ]).map((s, i) => (
           <motion.div
             key={s.step}
@@ -100,9 +100,9 @@ export function PreprocessingPage() {
           subtitle={o.split.rule}
           footer={
             <p className="text-[11px] leading-relaxed text-emerald-100/45">
-              Random 80/20 splits would let 2016-2020 patterns leak backwards in
-              time. Training strictly on history up to 2015 replicates a genuine
-              forecasting deployment (book sections 1.3 and 3.2.2).
+              Random shuffling would let future patterns leak into training.
+              Training strictly on history (up to 2015) and testing on later
+              years mimics a real forecasting deployment.
             </p>
           }
         >
@@ -145,7 +145,7 @@ export function PreprocessingPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard
           title="Skewness Before / After log1p"
-          subtitle="Section 2.2.2 — the five heavily right-skewed features"
+          subtitle="How log1p tames the five most extreme distributions"
         >
           <table className="w-full text-left text-xs">
             <thead>
@@ -232,7 +232,7 @@ export function PreprocessingPage() {
       {/* hybrid feature selection */}
       <SectionTitle
         title="Hybrid Feature Selection"
-        subtitle="Section 2.2.3 — Spearman correlation + Mutual Information + RF permutation importance, validated on a time-based window"
+        subtitle="Three ranking methods combined, then validated on a time-based window to pick the ideal number of features"
       />
 
       {!pipeline ? (
@@ -316,10 +316,9 @@ export function PreprocessingPage() {
               </tbody>
             </table>
             <p className="mt-3 text-[11px] leading-relaxed text-emerald-100/45">
-              Following the book, the production models pin the Top-13 subset for
-              regression (Table 4.1.1) and the Top-10 for classification. This
-              live validation window shows how each size behaves out-of-sample
-              before the final training.
+              The production models use the Top-13 features for regression and
+              the Top-10 for classification. This validation shows how each
+              subset size behaves on unseen years before final training.
             </p>
           </ChartCard>
         </div>

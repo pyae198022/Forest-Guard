@@ -32,7 +32,7 @@ export function DashboardPage() {
   const error = summary.error || evaluation.error;
 
   if (loading && !summary.data)
-    return <LoadingPanel label="Loading PJBook dashboard..." />;
+    return <LoadingPanel label="Loading dashboard..." />;
   if (error && !summary.data)
     return (
       <ErrorPanel
@@ -58,10 +58,10 @@ export function DashboardPage() {
     <div className="space-y-5">
       <PageHeader
         title="Deforestation Intelligence Dashboard"
-        description="IS-212 Data Mining project book — 4,030 country-year observations (1990-2020) across 27 attributes, mined with association rules, K-Means clustering, Random Forests and neural networks under a strict temporal protocol."
+        description="Explore 30 years of global forest loss — 4,030 country-year records across 130 countries and 27 environmental, climate and socio-economic indicators. Every number on this page is computed live from the dataset."
         actions={
           <span className="glass-chip inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-emerald-200/80">
-            <TreePine className="h-3.5 w-3.5 text-emerald-300" /> PJBook edition
+            <TreePine className="h-3.5 w-3.5 text-emerald-300" /> Live data · live models
           </span>
         }
       />
@@ -112,7 +112,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <ChartCard
           title="Global Deforestation Trend"
-          subtitle="Figure 2.3.3 — annual mean hectares, 1990-2020"
+          subtitle="Average hectares of forest lost per year, 1990–2020"
           className="xl:col-span-2"
         >
           {trend.loading || !trend.data ? (
@@ -165,8 +165,8 @@ export function DashboardPage() {
               );
             })}
             <p className="text-[11px] leading-relaxed text-emerald-100/45">
-              Book Table 3.2.2.1 — the Low/High classes are derived from the
-              training-set median only, keeping the test distribution honest.
+              Each country-year is labelled Low or High risk using the training
+              median as the cut-off — the test years stay completely unseen.
             </p>
           </div>
         </ChartCard>
@@ -176,7 +176,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <ChartCard
           title="Records by Region"
-          subtitle="Figure 2.3.4 — geographical imbalance of the panel"
+          subtitle="How the observations are spread across world regions"
         >
           {byRegion.loading || !byRegion.data ? (
             <LoadingPanel compact label="Loading..." />
@@ -214,8 +214,8 @@ export function DashboardPage() {
                 ))}
               </div>
               <p className="mt-2 text-[11px] text-emerald-100/50">
-                Target trained on log1p scale; metrics reported in hectares after
-                inverse transform (book section 3.2.3.1).
+                The model predicts on a log scale for stability — values are
+                converted back to hectares for reporting.
               </p>
             </div>
           </div>

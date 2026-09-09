@@ -1,4 +1,4 @@
-/** Shared types for the PJBook edition of ForestGuard AI. */
+/** Shared types for the ForestGuard AI frontend. */
 
 export type Risk = "Low" | "High";
 

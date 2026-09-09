@@ -21,8 +21,8 @@ interface BoxChartProps {
 
 /**
  * Hand-drawn SVG box-and-whisker plot (glass theme).
- * Used for Figure 2.3.1-style distribution boxes and the
- * per-region deforestation spread (Figure 2.3.2).
+ * Used for single-feature distribution boxes and the
+ * per-region deforestation spread.
  */
 export function BoxplotChart({
   boxes,

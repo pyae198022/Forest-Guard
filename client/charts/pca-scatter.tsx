@@ -20,7 +20,7 @@ interface PcaScatterProps {
 
 const CLUSTER_COLORS = ["#34d399", "#f59e0b", "#60a5fa", "#f472b6", "#a78bfa"];
 
-/** PCA 2-D scatter of K-Means clusters (book Figure 3.1.2.3.2). */
+/** PCA 2-D scatter of K-Means clusters. */
 export function PcaScatter({ points, variance, height = 320 }: PcaScatterProps) {
   const clusters = [...new Set(points.map((p) => p.cluster))].sort((a, b) => a - b);
   return (
@@ -68,7 +68,7 @@ interface LiftScatterProps {
   height?: number;
 }
 
-/** Support-vs-confidence rules scatter, coloured by lift (Fig 3.1.1.2). */
+/** Support-vs-confidence rules scatter, coloured by lift. */
 export function LiftScatter({ points, height = 320 }: LiftScatterProps) {
   const lifts = points.map((p) => p.lift);
   const lo = Math.min(...lifts);

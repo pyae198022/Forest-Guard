@@ -1,6 +1,6 @@
 {
-  "name": "Deforestation Data with Climate and Habitat (PJBook)",
-  "source": "University project book IS-212 \u2014 country-year panel",
+  "name": "Deforestation Data with Climate and Habitat",
+  "source": "Country-year panel, 130 countries, 1990-2020",
   "rows": 4030,
   "columns": 27,
   "numeric_columns": 25,

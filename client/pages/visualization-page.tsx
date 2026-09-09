@@ -64,14 +64,14 @@ export function VisualizationPage() {
     <div className="space-y-5">
       <PageHeader
         title="Data Visualization"
-        description="Chapter 2.3 — exploratory figures that sit between preprocessing and modelling: distributions, outliers, regional spreads, temporal trends and the correlation structure that guides feature selection."
+        description="See the dataset from every angle: feature distributions, outliers, regional spreads, the 30-year trend and the correlations that decide which predictors the models are allowed to use."
       />
 
-      {/* Fig 2.2.2.1 distribution + skewness */}
+      {/* distribution + skewness */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard
           title="Feature Distribution & Skewness"
-          subtitle="Figure 2.2.2.1 — heavy right tails motivate the log1p transform"
+          subtitle="Pick any feature — heavily skewed ones are shown on a log scale"
           actions={
             <select
               value={histFeature}
@@ -108,10 +108,10 @@ export function VisualizationPage() {
           )}
         </ChartCard>
 
-        {/* Fig 2.3.1 box plot + outliers */}
+        {/* box plot + outliers */}
         <ChartCard
           title="Box Plot & Outlier Detection"
-          subtitle="Figure 2.3.1 — IQR fences flag extreme observations"
+          subtitle="Quartiles and IQR fences reveal how many extreme values each feature has"
           actions={
             <select
               value={boxFeature}
@@ -151,11 +151,11 @@ export function VisualizationPage() {
         </ChartCard>
       </div>
 
-      {/* Fig 2.3.2 region spread + Fig 2.3.3 trend */}
+      {/* region spread + trend */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard
           title="Deforestation Spread by Region"
-          subtitle="Figure 2.3.2 — South America shows the widest and highest range"
+          subtitle="Where forest loss is highest — and most uneven"
         >
           {regionBox.loading || !regionBox.data ? (
             <LoadingPanel compact label="Aggregating..." />
@@ -175,7 +175,7 @@ export function VisualizationPage() {
         <div className="space-y-4">
           <ChartCard
             title="Global Annual Trend"
-            subtitle="Figure 2.3.3 — sustained decline 1990-2020"
+            subtitle="Average hectares lost per year — a sustained decline since 1990"
           >
             {trend.loading || !trend.data ? (
               <LoadingPanel compact label="Loading..." />
@@ -191,7 +191,7 @@ export function VisualizationPage() {
 
           <ChartCard
             title="Records by Region"
-            subtitle="Figure 2.3.4 — Other/Global dominates the panel"
+            subtitle="Observation counts per region — aggregated sources dominate"
           >
             {byRegion.loading || !byRegion.data ? (
               <LoadingPanel compact label="Counting..." />
@@ -209,15 +209,15 @@ export function VisualizationPage() {
         </div>
       </div>
 
-      {/* Fig 2.3.5 heatmap + Fig 2.3.6 top correlations */}
+      {/* heatmap + top correlations */}
       <SectionTitle
         title="Correlation Structure"
-        subtitle="Spearman coefficients — collinearity clusters feed the feature-selection step"
+        subtitle="How strongly each predictor moves with the target — this guides which features the models may use"
       />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <ChartCard
           title="Correlation Heat-map"
-          subtitle="Figure 2.3.5 — emissions & carbon-sink move together (ρ ≈ 1)"
+          subtitle="Bright cells move together — near-identical columns are redundant"
           className="xl:col-span-3"
         >
           {corr.loading || !corr.data ? (
@@ -233,7 +233,7 @@ export function VisualizationPage() {
 
         <ChartCard
           title="Top Features vs Target"
-          subtitle="Figure 2.3.6 — |Spearman| with Deforestation_Ha"
+          subtitle="Strongest relationships with deforestation, ranked"
           className="xl:col-span-2"
           contentClassName="max-h-[470px] space-y-1.5 overflow-y-auto"
         >
@@ -263,9 +263,9 @@ export function VisualizationPage() {
           )}
           {topCorr.data && (
             <p className="pt-2 text-[11px] leading-relaxed text-rose-200/60">
-              <Flame className="mr-1 inline h-3 w-3" />Red bars mark the four
-              leakage columns (ρ ≈ 1.0) plus Environmental_Impact_Score —
-              excluded from prediction features per book section 3.2.2.
+              <Flame className="mr-1 inline h-3 w-3" />Red bars mark columns
+              that are essentially consequences of deforestation (ρ ≈ 1.0) —
+              they are excluded from prediction to keep the models honest.
             </p>
           )}
         </ChartCard>

@@ -19,10 +19,10 @@ export function AboutPage() {
     <div className="space-y-5">
       <PageHeader
         title="About This Project"
-        description="ForestGuard AI is the interactive companion of the IS-212 Data & Knowledge Mining project book — 'Deforestation Data with Climate and Habitat' — implementing every chapter of its methodology as a live, reproducible web application."
+        description="ForestGuard AI turns a university data-mining study of global deforestation into a live, interactive application — explore the data, watch the preprocessing pipeline run, discover patterns and test the trained models, all in the browser."
         actions={
           <span className="glass-chip inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-emerald-200/80">
-            <GraduationCap className="h-3.5 w-3.5 text-emerald-300" /> Semester IX · IS-212
+            <GraduationCap className="h-3.5 w-3.5 text-emerald-300" /> Data Mining · University Project
           </span>
         }
       />
@@ -30,7 +30,7 @@ export function AboutPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <ChartCard
           title="Project Background"
-          subtitle="Chapter 1.1 — why this problem matters"
+          subtitle="Why deforestation prediction matters"
           className="xl:col-span-2"
         >
           <p className="text-sm leading-relaxed text-emerald-100/70">
@@ -59,7 +59,7 @@ export function AboutPage() {
           </div>
         </ChartCard>
 
-        <ChartCard title="Objectives" subtitle="Chapter 1.2">
+        <ChartCard title="Objectives" subtitle="What this project sets out to do">
           <ul className="space-y-2.5 text-xs leading-relaxed text-emerald-100/65">
             {[
               "Identify trends associated with deforestation by preprocessing and analysing historical environmental and climatic variables.",
@@ -78,52 +78,52 @@ export function AboutPage() {
 
       <SectionTitle
         title="Methodology Pipeline"
-        subtitle="How the project book maps onto this application"
+        subtitle="From raw data to trained models in four stages"
       />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
-            ch: "Ch. 2.1-2.2",
+            ch: "Stage 1",
             t: "Data Preparation",
             pts: [
               "4,030 × 27 panel · zero missing · zero duplicates",
               "log1p on 5 skewed features (skew ≈ 10.6)",
               "One-hot encoding of Entity / Region",
               "Min-Max scaling fit on the training split",
-              "Hybrid feature ranking (Spearman + MI + permutation)",
+              "Hybrid feature ranking (correlation + information gain + permutation)",
             ],
           },
           {
-            ch: "Ch. 2.3 / 3.1",
+            ch: "Stage 2",
             t: "Exploration & Mining",
             pts: [
               "Distributions, box plots, outliers per feature",
               "Global trend 1990-2020 and regional spreads",
-              "Apriori rules: qcut Low/Medium/High bins",
-              "support ≥ 0.10 · confidence ≥ 0.60 · lift ranking",
-              "K-Means K = 2…10 selected by silhouette",
+              "Apriori rules on Low/Medium/High binned features",
+              "support ≥ 10% · confidence ≥ 60% · ranked by lift",
+              "K-Means with K = 2…10 selected by silhouette",
             ],
           },
           {
-            ch: "Ch. 3.2",
+            ch: "Stage 3",
             t: "Predictive Modelling",
             pts: [
               "Strict temporal split: train ≤ 2015, test > 2015",
               "Leakage filter on 5 target-derived columns",
-              "RF regression baseline & Top-13 (Table 4.1.1)",
-              "MLP regressor/classifier baselines & optimised",
+              "Random Forest regression, baseline & optimised",
+              "Neural-network regressors and classifiers",
               "Binary risk target via train-median threshold",
             ],
           },
           {
-            ch: "Ch. 4",
+            ch: "Stage 4",
             t: "Evaluation",
             pts: [
-              "MAE / RMSE / R² in hectares (inverse log1p)",
+              "MAE / RMSE / R² reported in hectares",
               "Accuracy, Balanced Accuracy, Macro-P/R/F1",
               "ROC curves + AUC per classifier",
               "Confusion matrices on the 2016-2020 window",
-              "5-fold CV on the training period only",
+              "5-fold cross-validation on the training period",
             ],
           },
         ].map((c) => (
@@ -145,7 +145,7 @@ export function AboutPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard
           title="Advantages"
-          subtitle="Chapter 5.1"
+          subtitle="Strengths of this approach"
         >
           <ul className="space-y-2 text-xs leading-relaxed text-emerald-100/65">
             {[
@@ -164,7 +164,7 @@ export function AboutPage() {
 
         <ChartCard
           title="Limitations"
-          subtitle="Chapter 5.2"
+          subtitle="Where the models fall short"
         >
           <ul className="space-y-2 text-xs leading-relaxed text-emerald-100/65">
             {[
@@ -199,7 +199,7 @@ export function AboutPage() {
           </div>
         </ChartCard>
 
-        <ChartCard title="References" subtitle="From the project book">
+        <ChartCard title="Data Sources" subtitle="Where the dataset comes from">
           <ol className="list-inside list-decimal space-y-1.5 text-[11px] leading-relaxed text-emerald-100/55">
             <li>FAO — Global Forest Resources Assessment (2020)</li>
             <li>The World Bank — World Development Indicators</li>

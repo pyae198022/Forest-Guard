@@ -123,8 +123,8 @@ def records_by_region():
         "data": [{"region": k, "count": int(v),
                   "pct": round(100 * v / len(df), 2)}
                  for k, v in vc.items()],
-        "interpretation": "Geographical imbalance: Other/Global dominates "
-                          "the panel (book limitation 5.2).",
+        "interpretation": "Geographical imbalance: aggregated Other/Global "
+                          "records dominate the panel.",
     })
 
 

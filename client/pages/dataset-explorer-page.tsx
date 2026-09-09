@@ -94,17 +94,17 @@ export function DatasetExplorerPage() {
     <div className="space-y-5">
       <PageHeader
         title="Dataset Explorer"
-        description={`Chapter 2.1 — ${d?.name ?? "PJBook dataset"}: ${d?.rows.toLocaleString()} rows × ${d?.columns} columns covering ${d?.year_min}-${d?.year_max} for ${d?.entities} countries. 25 numeric and 2 categorical attributes.`}
+        description={`Browse the full deforestation dataset: ${d?.rows.toLocaleString() ?? "4,030"} records × ${d?.columns ?? 27} attributes, covering ${d?.year_min ?? 1990}–${d?.year_max ?? 2020} across ${d?.entities ?? 130} countries. Search, filter, sort and profile every column.`}
         actions={
           <a href="/api/dataset/export?XTransformPort=3010" download>
             <Button variant="outline" size="sm" className="gap-1.5 border-emerald-400/25 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20">
-              <Download className="h-3.5 w-3.5" /> CSV
+              <Download className="h-3.5 w-3.5" /> Export CSV
             </Button>
           </a>
         }
       />
 
-      {/* data quality — book Table 2.1.3 */}
+      {/* data quality */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: "Total Records", value: (quality.data?.total_records ?? d?.rows ?? 0).toLocaleString() },
@@ -125,7 +125,7 @@ export function DatasetExplorerPage() {
       </div>
 
       {/* records browser */}
-      <SectionTitle title="Records" subtitle="Filter by country, region and year range — served from the SQLite mirror" />
+      <SectionTitle title="Records" subtitle="Filter by country, region and year range — click any column header to sort" />
       <ChartCard
         title="Country-year observations"
         subtitle={`${total.toLocaleString()} matching rows`}
@@ -233,7 +233,7 @@ export function DatasetExplorerPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard
           title="Attribute Dictionary"
-          subtitle="Book Table 2.1.1 — categories, types and definitions"
+          subtitle="What each of the 27 columns means and how it is categorised"
           contentClassName="max-h-[430px] overflow-y-auto"
         >
           <table className="w-full text-left text-xs">
@@ -299,8 +299,8 @@ export function DatasetExplorerPage() {
               </div>
               <FeatureHistogram data={profile.data.histogram} height={250} />
               <p className="mt-2 text-[11px] text-emerald-100/40">
-                Log-scaled histogram — the log1p regime the book applies to the
-                five most skewed features (section 2.2.2).
+                Histogram on a log scale — this keeps extremely skewed values
+                readable instead of squeezing everything into one bar.
               </p>
             </div>
           ) : (
@@ -325,10 +325,10 @@ export function DatasetExplorerPage() {
         </ChartCard>
       </div>
 
-      {/* descriptive statistics — book Table 2.1.2 */}
+      {/* descriptive statistics */}
       <ChartCard
         title="Descriptive Statistics"
-        subtitle="Book Table 2.1.2 — count / mean / std / min / median / max for every numeric attribute"
+        subtitle="Count, mean, standard deviation and range for every numeric attribute"
         contentClassName="max-h-[460px] overflow-y-auto"
       >
         <table className="w-full min-w-[680px] text-right text-xs">
@@ -358,9 +358,9 @@ export function DatasetExplorerPage() {
 
       <div className="flex items-start gap-2 rounded-xl border border-amber-400/15 bg-amber-400/[0.05] p-3 text-[11px] leading-relaxed text-amber-200/70">
         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-        Book limitation 5.2 — the panel is geographically imbalanced:
-        Other/Global aggregates dominate ({d?.regions.length ?? 0} region labels,
-        most rows are Other/Global), which limits localised predictions.
+        Keep in mind: many rows are aggregated "Other/Global" figures rather
+        than single countries, so predictions for individual regions are less
+        precise than the overall global picture.
         <BookOpen className="ml-auto h-4 w-4 shrink-0 opacity-40" />
       </div>
     </div>

@@ -43,7 +43,7 @@ export function ModelEvaluationPage() {
     setRetrainMsg(null);
     try {
       await forestApi.retrain();
-      setRetrainMsg("Full PJBook pipeline re-run complete — all metrics below are fresh.");
+      setRetrainMsg("All models retrained from scratch — every metric below is fresh.");
       reg.refresh(); clf.refresh(); roc.refresh(); cv.refresh(); summary.refresh(); importance.refresh();
     } catch (e) {
       setRetrainMsg(e instanceof Error ? `Retrain failed: ${e.message}` : "Retrain failed");
@@ -66,7 +66,7 @@ export function ModelEvaluationPage() {
     <div className="space-y-5">
       <PageHeader
         title="Model Evaluation"
-        description="Chapter 4 — every PJBook model scored on the untouched 2016-2020 test years, with ROC-AUC, confusion matrices and 5-fold cross-validation restricted to the training period. Book reference values are shown side-by-side."
+        description="How good are the models? Every one is scored on years it never saw (2016–2020), with ROC curves, confusion matrices and cross-validation for stability. Reference values from the project book are shown side-by-side for comparison."
         actions={
           <Button onClick={retrain} disabled={retraining}
             className="gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-sm text-white hover:from-emerald-400 hover:to-teal-400">
@@ -122,9 +122,9 @@ export function ModelEvaluationPage() {
       {/* regression comparison */}
       <SectionTitle
         title="Regression Comparison"
-        subtitle="Tables 4.1.1.2 / 4.1.3 / 4.1.5 — metrics in hectares on the test window"
+        subtitle="Predicting exact hectares — the lower the MAE/RMSE and the higher the R², the better"
       />
-      <ChartCard title="Random Forest & Neural Network regressors" subtitle="Live results vs book benchmarks">
+      <ChartCard title="Random Forest & Neural Network regressors" subtitle="Live results vs book reference values">
         <ModelTable
           rows={regRows.map((r) => ({
             label: r.label,
@@ -141,9 +141,9 @@ export function ModelEvaluationPage() {
       {/* classification comparison */}
       <SectionTitle
         title="Classification Comparison"
-        subtitle="Tables 4.1.2 / 4.1.4 / 4.1.6 — Low/High risk prediction quality"
+        subtitle="Predicting Low vs High risk — accuracy, balance and error types"
       />
-      <ChartCard title="RF, hybrid and MLP classifiers" subtitle="Live results vs book benchmarks">
+      <ChartCard title="RF, hybrid and MLP classifiers" subtitle="Live results vs book reference values">
         <ModelTable
           rows={clfRows.map((r) => ({
             label: r.label,
@@ -164,7 +164,7 @@ export function ModelEvaluationPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard
           title="ROC Curves & AUC"
-          subtitle="Figure 4.2.2 — discrimination between Low/High classes"
+          subtitle="True-positive vs false-positive trade-off — closer to the top-left corner is better"
           footer={
             <div className="flex flex-wrap gap-3 text-[11px] text-emerald-100/55">
               {Object.entries(roc.data?.curves ?? {}).map(([k, v]) => (
@@ -228,7 +228,7 @@ export function ModelEvaluationPage() {
       {/* cross validation */}
       <SectionTitle
         title="5-Fold Cross-Validation"
-        subtitle="Tables 4.2.3.1/4.2.3.2 — training split only, mean ± std across folds"
+        subtitle="Each model trained five times on different slices of the training period — mean ± spread shows how stable it is"
       />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard title="Regression CV" subtitle="log-scale target (training regime)">
@@ -287,25 +287,25 @@ export function ModelEvaluationPage() {
       {/* findings */}
       <ChartCard
         title="Findings"
-        subtitle="Section 4.2.4 — what the numbers say"
+        subtitle="What the numbers say"
       >
         <div className="grid gap-3 md:grid-cols-2">
           {[
             {
               t: "Regression",
-              b: `Top-13 Random Forest is the strongest regressor with R² ≈ ${regRows.find((r) => r.model === "rf_top13")?.r2?.toFixed(4) ?? "-"} and MAE ≈ ${regRows.find((r) => r.model === "rf_top13")?.mae?.toLocaleString() ?? "-"} ha, closely reproducing the book's 0.9747 / 16,269 ha champion.`,
+              b: `Top-13 Random Forest is the strongest regressor with R² ≈ ${regRows.find((r) => r.model === "rf_top13")?.r2?.toFixed(4) ?? "-"} and MAE ≈ ${regRows.find((r) => r.model === "rf_top13")?.mae?.toLocaleString() ?? "-"} ha — right in line with the reference results from the project book.`,
             },
             {
               t: "Classification",
-              b: `The RF baseline hits ${pct(clfRows.find((r) => r.model === "rf_clf_baseline")?.accuracy)} accuracy with macro-F1 ${pct(clfRows.find((r) => r.model === "rf_clf_baseline")?.macro_f1)} — matching the book's Table 4.1.2 to four decimals. Feature selection keeps quality with fewer inputs.`,
+              b: `The RF baseline hits ${pct(clfRows.find((r) => r.model === "rf_clf_baseline")?.accuracy)} accuracy with macro-F1 ${pct(clfRows.find((r) => r.model === "rf_clf_baseline")?.macro_f1)} — matching the book's reported result to four decimals. Feature selection keeps quality with fewer inputs.`,
             },
             {
               t: "Neural networks",
-              b: "MLP models trail the forests on the hectares-scale test (book reports the same ordering) yet improve markedly on the optimised feature subset — the Top-10 classifier reaches ≈ 0.975 accuracy, identical to the book.",
+              b: "MLP models trail the forests on the hectares-scale test (the book reports the same ordering) yet improve markedly on the optimised feature subset — the Top-10 classifier reaches ≈ 0.975 accuracy, identical to the book.",
             },
             {
               t: "Stability",
-              b: `Cross-validation standard deviations stay ≤ 0.005 for tree ensembles (book: ≤ 0.0032), indicating stable folds and low overfitting risk across the training period.`,
+              b: `Cross-validation standard deviations stay ≤ 0.005 for tree ensembles, indicating stable folds and low overfitting risk across the training period.`,
             },
           ].map((f) => (
             <div key={f.t} className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
@@ -342,7 +342,7 @@ function ModelTable({
             <th className="px-3 py-2">Model</th>
             <th className="px-3 py-2 text-right">Metric</th>
             <th className="px-3 py-2 text-right">This run</th>
-            <th className="px-3 py-2 text-right">Book</th>
+            <th className="px-3 py-2 text-right">Book ref.</th>
           </tr>
         </thead>
         <tbody>

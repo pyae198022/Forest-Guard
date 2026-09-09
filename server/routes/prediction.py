@@ -26,13 +26,13 @@ class BatchRequest(BaseModel):
 
 
 MODEL_LABELS = {
-    "rf_top13": "Random Forest — Top 13 (regression, book champion)",
-    "rf_baseline": "Random Forest — Baseline (all 19 features)",
-    "nn_top10": "Neural Network — Optimized Top 10 (regression)",
-    "nn_baseline": "Neural Network — Baseline (regression)",
+    "rf_top13": "Random Forest — Top 13 features (regression)",
+    "rf_baseline": "Random Forest — all features (regression)",
+    "nn_top10": "Neural Network — optimised Top 10 (regression)",
+    "nn_baseline": "Neural Network — all features (regression)",
     "rf_clf_top10": "Random Forest Classifier — Top 10 (Low/High risk)",
-    "rf_clf_baseline": "Random Forest Classifier — Baseline (Low/High risk)",
-    "nn_clf_top10": "Neural Network Classifier — Optimized (Low/High)",
+    "rf_clf_baseline": "Random Forest Classifier — all features (Low/High risk)",
+    "nn_clf_top10": "Neural Network Classifier — optimised (Low/High)",
 }
 
 

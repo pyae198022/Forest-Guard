@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     short: "Overview",
     icon: Gauge,
-    description: "PJBook KPIs, temporal split and headline model results",
+    description: "Key numbers, 30-year trend and headline model results",
   },
   {
     key: "explorer",
@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
     short: "Data",
     icon: Table2,
     description:
-      "Chapter 2.1 — the 4,030 x 27 country-year panel (1990-2020), quality report and attribute dictionary",
+      "Browse, filter and profile the 4,030-record country-year panel (1990-2020)",
   },
   {
     key: "preprocessing",
@@ -41,7 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
     short: "Prepare",
     icon: Wand2,
     description:
-      "Chapter 2.2 — quality audit, log1p transform, one-hot encoding, Min-Max scaling and hybrid feature selection",
+      "Run the six-step pipeline: audit, skew correction, encoding, scaling, feature ranking and validation",
   },
   {
     key: "visualization",
@@ -49,7 +49,7 @@ export const NAV_ITEMS: NavItem[] = [
     short: "Charts",
     icon: BarChart3,
     description:
-      "Chapter 2.3 — distributions, outliers, regional spreads, trends and correlation structure",
+      "Distributions, outliers, regional spreads, trends and correlation structure",
   },
   {
     key: "mining",
@@ -57,7 +57,7 @@ export const NAV_ITEMS: NavItem[] = [
     short: "Mining",
     icon: FileBarChart,
     description:
-      "Chapter 3.1 — Apriori association rules (support/confidence/lift) and K-Means clustering",
+      "Association rules and K-Means clustering that reveal hidden patterns",
   },
   {
     key: "prediction",
@@ -65,7 +65,7 @@ export const NAV_ITEMS: NavItem[] = [
     short: "Predict",
     icon: Sparkles,
     description:
-      "Chapter 3.2 — predict Deforestation_Ha and Low/High risk with the trained PJBook models",
+      "Build a scenario and predict deforestation or Low/High risk with the trained models",
   },
   {
     key: "evaluation",
@@ -73,7 +73,7 @@ export const NAV_ITEMS: NavItem[] = [
     short: "Models",
     icon: Database,
     description:
-      "Chapter 4 — regression & classification comparisons, ROC-AUC, confusion matrix and 5-fold CV",
+      "Compare models: metrics, ROC curves, confusion matrix, cross-validation and importance",
   },
   {
     key: "about",
@@ -81,6 +81,6 @@ export const NAV_ITEMS: NavItem[] = [
     short: "About",
     icon: Info,
     description:
-      "Project book summary — objectives, methodology, findings and limitations",
+      "Project background, objectives, methodology, findings and limitations",
   },
 ];

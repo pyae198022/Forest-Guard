@@ -40,8 +40,8 @@ def dataset_info(df: pd.DataFrame) -> dict:
     numeric = [c for c in df.columns if df[c].dtype != object]
     categorical = [c for c in df.columns if df[c].dtype == object]
     return {
-        "name": "Deforestation Data with Climate and Habitat (PJBook)",
-        "source": "University project book IS-212 — country-year panel",
+        "name": "Deforestation Data with Climate and Habitat",
+        "source": "Country-year panel, 130 countries, 1990-2020",
         "rows": int(len(df)),
         "columns": int(df.shape[1]),
         "numeric_columns": len(numeric),

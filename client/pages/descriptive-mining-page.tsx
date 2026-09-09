@@ -43,7 +43,7 @@ export function DescriptiveMiningPage() {
     <div className="space-y-5">
       <PageHeader
         title="Descriptive Mining"
-        description="Chapter 3.1 — unsupervised discovery: Apriori association rules over quantile-binned predictors (target excluded to prevent leakage) and K-Means clustering of countries with silhouette-based K selection."
+        description="Discover hidden patterns without a target variable: Apriori association rules reveal which conditions appear together, and K-Means clustering groups countries with similar environmental profiles."
         actions={
           p ? (
             <span className="glass-chip inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-emerald-200/80">
@@ -72,11 +72,11 @@ export function DescriptiveMiningPage() {
         </div>
       )}
 
-      {/* Fig 3.1.1.1 frequent itemsets + Fig 3.1.1.2 support/confidence */}
+      {/* frequent itemsets + support/confidence */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard
           title="Top 15 Frequent Itemsets"
-          subtitle="Figure 3.1.1.1 — ranked by support"
+          subtitle="Feature conditions that most often occur together (support = share of all records)"
           contentClassName="space-y-1.5"
         >
           {itemsets.loading || !itemsets.data ? (
@@ -100,7 +100,7 @@ export function DescriptiveMiningPage() {
 
         <ChartCard
           title="Support vs Confidence (coloured by Lift)"
-          subtitle="Figure 3.1.1.2 — larger, warmer dots = stronger rules"
+          subtitle="Each dot is a rule — larger, warmer dots are stronger patterns"
         >
           {scatter.loading || !scatter.data ? (
             <LoadingPanel compact label="Plotting..." />
@@ -110,10 +110,10 @@ export function DescriptiveMiningPage() {
         </ChartCard>
       </div>
 
-      {/* Fig 3.1.1.3 top rules */}
+      {/* top rules */}
       <ChartCard
         title="Top 10 Association Rules by Lift"
-        subtitle="Figure 3.1.1.3 — lift ≥ 5 means the co-occurrence is five times stronger than chance"
+        subtitle="Lift ≥ 5 means the co-occurrence is five times stronger than pure chance"
       >
         {rules.loading || !rules.data ? (
           <LoadingPanel compact label="Ranking..." />
@@ -164,12 +164,12 @@ export function DescriptiveMiningPage() {
       {/* clustering */}
       <SectionTitle
         title="K-Means Clustering"
-        subtitle="Section 3.1.2 — ten book-chosen features, K evaluated 2-10 by inertia + silhouette (random_state=42, n_init=10)"
+        subtitle="Countries grouped by ten environmental & socio-economic features — the number of groups (K) is chosen by silhouette score"
       />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <ChartCard
           title="K Selection"
-          subtitle="Table 3.1.2.2 — highest silhouette wins"
+          subtitle="Silhouette score for each K — higher means cleaner groups"
           actions={
             <select
               value={kOverride ?? ""}
@@ -199,7 +199,7 @@ export function DescriptiveMiningPage() {
 
         <ChartCard
           title="PCA Cluster Scatter"
-          subtitle="Figure 3.1.2.3.2 — two-axis projection"
+          subtitle="Countries projected onto two axes, coloured by cluster"
           className="xl:col-span-2"
         >
           {cluster.loading || !cluster.data ? (
@@ -221,9 +221,9 @@ export function DescriptiveMiningPage() {
             subtitle={`K = ${cluster.data.k} · overall silhouette ${cluster.data.overall_silhouette}`}
             footer={
               <p className="text-[11px] text-emerald-100/45">
-                Book benchmark — K = 2 at silhouette 0.2520 (this run:{" "}
-                {cluster.data.overall_silhouette}). Weak-moderate structure with
-                overlapping country profiles, exactly as the book reports.
+                Silhouette ranges from −1 to 1: values around 0.25 indicate
+                weak-moderate structure with overlapping country profiles —
+                expected for complex real-world data.
               </p>
             }
           >
@@ -283,7 +283,7 @@ export function DescriptiveMiningPage() {
       {cluster.data && (
         <ChartCard
           title="IF-THEN Cluster Rules"
-          subtitle="Section 3.1.2.4 — interpretable decision rules relative to the global mean"
+          subtitle="Plain-language summaries of each cluster relative to the global average"
         >
           <div className="grid gap-2 md:grid-cols-2">
             {cluster.data.rules.map((r) => (

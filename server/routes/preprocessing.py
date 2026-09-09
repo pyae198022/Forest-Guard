@@ -33,8 +33,8 @@ def overview():
         "onehot": mlprep.onehot_summary(df),
         "minmax": mlprep.minmax_preview(df),
         "leakage_excluded": leak,
-        "rationale": ("Section 3.2.2 — downstream effects / target-derived "
-                      "scores are removed to prevent target leakage and "
+        "rationale": ("These columns are downstream effects of deforestation "
+                      "itself. Removing them prevents target leakage and "
                       "look-ahead bias."),
         "split": {"rule": f"train Year <= {mlcfg.SPLIT_YEAR}, "
                           f"test Year > {mlcfg.SPLIT_YEAR}",

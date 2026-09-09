@@ -90,7 +90,7 @@ export function PredictionPage() {
     <div className="space-y-5">
       <PageHeader
         title="AI Prediction"
-        description="Chapter 3.2 — inference with the PJBook models: Random Forest regression on the Top-13 subset (book champion), neural networks and Low/High risk classifiers. All features are Min-Max scaled exactly like training."
+        description="Build your own country scenario with the sliders, then let the trained models estimate deforestation in hectares or classify Low/High risk. Presets give you a realistic starting point in one click."
         actions={
           <div className="flex gap-2">
             <Button size="sm" variant="outline"
@@ -112,7 +112,7 @@ export function PredictionPage() {
         <div className="space-y-4 xl:col-span-2">
           <ChartCard
             title="Scenario Console"
-            subtitle={`${features.length} predictors · set values or start from a preset`}
+            subtitle={`${features.length} environmental & socio-economic sliders · pick a model, set values, predict`}
             actions={
               <select
                 value={modelKey}
@@ -214,10 +214,10 @@ export function PredictionPage() {
                   <Gauge className="h-4 w-4" />
                   implied risk: {result.implied_risk}
                 </div>
-                <p className="text-[11px] leading-relaxed text-emerald-100/45">
-                  Trained on log1p(target); the hectare value is the inverse
-                  transform. Implied risk compares the prediction against the
-                  training median threshold.
+                <p className="mt-2 text-[11px] leading-relaxed text-emerald-100/45">
+                  The model works on a log scale internally and converts the
+                  result back to hectares. Implied risk compares the prediction
+                  against the Low/High threshold learned from training data.
                 </p>
               </motion.div>
             ) : (
@@ -252,14 +252,14 @@ export function PredictionPage() {
 
           {predictError && <ErrorPanel message={predictError} onRetry={predict} />}
 
-          <ChartCard title="How this works" subtitle="Methodology notes">
+          <ChartCard title="How this works" subtitle="Good to know">
             <ul className="space-y-2 text-[11px] leading-relaxed text-emerald-100/55">
               <li className="flex gap-2"><Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/60" />
-                Missing sliders are imputed with the training-split median, then Min-Max scaled with the frozen training scaler.</li>
+                Any slider you leave untouched is filled with the median from the training years, then scaled exactly like during training.</li>
               <li className="flex gap-2"><Gauge className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/60" />
-                Regression champions: RF Top-13 (book Table 4.1.1) with MAE ≈ 16.6k ha and R² ≈ 0.97 on 2016-2020.</li>
+                The regression champion (Random Forest, 13 best features) reaches ~97% R² on years it has never seen.</li>
               <li className="flex gap-2"><Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400/60" />
-                Classifiers reproduce the book's 98.46% baseline accuracy; the class threshold is the 2015-truncated median.</li>
+                The risk classifier exceeds 98% accuracy on the 2016–2020 test window.</li>
             </ul>
           </ChartCard>
         </div>
