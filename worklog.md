@@ -78,3 +78,22 @@ Stage Summary:
 - App fully verified end-to-end after PJBook rebuild: 35/35 API endpoints green, 4 key pages re-verified live in browser (8/8 verified across sessions)
 - Book reproduction confirmed in UI: RF classifier 98.46% acc (book 98.46%), Apriori top itemset support 92.2% (book 92.2%)
 - Deliverable ready: Next.js :3000 (8 pages) + FastAPI :3010 (31 usable endpoints)
+
+---
+Task ID: 4
+Agent: main (Super Z)
+Task: Complete 8/8 live page re-verification (remaining pages) + lint + mobile check
+
+Work Log:
+- npx next lint: clean (no issues)
+- Dataset Explorer: KPIs (4030 / 27 / 0 missing / 0 dupes), data table live; country filter "Brazil" -> 31 matching rows (1990-2020 exact)
+- Data Preprocessing: 6-step pipeline cards render; "Run Full Pipeline" clicked -> completed ~15s; detail tables update (log1p skew 10.589 -> -0.599 etc., one-hot 27 -> +137 dummies -> 164 cols, Min-Max preview, hybrid ranking 19 candidates, subset validation)
+- Data Visualization: region boxplot (log axis), records-by-region, correlation heat-map & top-features sections all render
+- About Project: Chapter 5.1 Advantages / 5.2 Limitations cards, Technology Stack, References render
+- Mobile 390x844: layout stacks correctly, hamburger nav present
+- Zero page errors across all checks; browser closed cleanly
+- Screenshots: logs/final-smoke-{explorer,explorer-filter,preproc,preproc-run,preproc-detail,viz,about,mobile}.png
+
+Stage Summary:
+- 8/8 pages now re-verified live in this session (Dashboard, Explorer, Preprocessing, Visualization, Mining, Prediction, Evaluation, About)
+- Combined with 35/35 API smoke test: project fully verified, no outstanding defects
