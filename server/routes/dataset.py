@@ -38,7 +38,8 @@ def summary():
         "rows": int(len(df)),
         "columns": int(df.shape[1]),
         "numeric_columns": int(df.select_dtypes("number").shape[1]),
-        "categorical_columns": int(df.select_dtypes("object").shape[1]),
+        "categorical_columns": int(sum(
+            1 for c in df.columns if not pd.api.types.is_numeric_dtype(df[c]))),
         "entities": int(df["Entity"].nunique()),
         "regions": int(df["Region"].nunique()),
         "year_min": int(df["Year"].min()),
@@ -77,7 +78,7 @@ def stats():
     df = _df()
     rows = []
     for col in mlcfg.ATTRIBUTE_DICT:
-        if col not in df.columns or df[col].dtype == object:
+        if col not in df.columns or not pd.api.types.is_numeric_dtype(df[col]):
             continue
         s = df[col].astype(float)
         rows.append({
@@ -147,7 +148,7 @@ def column_profile(name: str):
     if name not in df.columns:
         return responses.err(f"Unknown column '{name}'", 404)
     s = df[name]
-    if s.dtype == object:
+    if not pd.api.types.is_numeric_dtype(s):
         vc = s.value_counts()
         return responses.ok({
             "name": name, "type": "categorical",

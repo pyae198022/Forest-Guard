@@ -37,8 +37,8 @@ def _read_source() -> pd.DataFrame:
 
 
 def dataset_info(df: pd.DataFrame) -> dict:
-    numeric = [c for c in df.columns if df[c].dtype != object]
-    categorical = [c for c in df.columns if df[c].dtype == object]
+    numeric = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    categorical = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
     return {
         "name": "Deforestation Data with Climate and Habitat",
         "source": "Country-year panel, 130 countries, 1990-2020",

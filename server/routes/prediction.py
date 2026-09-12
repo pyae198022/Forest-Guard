@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from server.database import sqlite
 from server.ml import config as mlcfg
-from server.ml.models import load_raw, predict_with_model
+from server.ml.models import BOOK_TOP10, BOOK_TOP13, load_raw, predict_with_model
 from server.utils import config, responses
 
 router = APIRouter(prefix="/api/prediction", tags=["prediction"])
@@ -36,11 +36,36 @@ MODEL_LABELS = {
 }
 
 
+def _model_feature_map() -> dict[str, list[str]]:
+    """Exact feature schema consumed by each model, in model input order.
+
+    Mirrors the 'feature_sets' produced at training time:
+      * baseline -> Book 2.2.3 candidate pool (19: Year + 18 numeric)
+      * top13    -> Book Table 4.1.1 POSITION 1-13 (pinned)
+      * top10    -> Book Table 4.1.1 POSITION 1-10 (classification)
+    """
+    df = load_raw()
+    cand = mlcfg.candidate_features(list(df.columns))
+    top13 = [f for f in BOOK_TOP13 if f in df.columns]
+    top10 = [f for f in BOOK_TOP10 if f in df.columns]
+    return {
+        "rf_top13": top13,
+        "rf_baseline": cand,
+        "nn_top10": top10,
+        "nn_baseline": cand,
+        "rf_clf_top10": top10,
+        "rf_clf_baseline": cand,
+        "nn_clf_top10": top10,
+    }
+
+
 @router.get("/models")
 def available_models():
+    feats_by_model = _model_feature_map()
     return responses.ok([
         {"key": key, "label": label,
-         "task": "classification" if "clf" in key else "regression"}
+         "task": "classification" if "clf" in key else "regression",
+         "features": feats_by_model[key]}
         for key, label in MODEL_LABELS.items()
     ])
 

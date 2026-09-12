@@ -20,6 +20,82 @@ import { prettyName, RISK_COLORS } from "@client/src/theme";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 
+/** Exact slider labels for the fixed Top-13 scenario layout. */
+const SCENARIO_LABELS: Record<string, string> = {
+  "Biodiversity_Impact_Index": "Biodiversity Impact Index",
+  "Environmental_Impact_Score": "Environmental Impact Score",
+  "Forest_Fragmentation_Index": "Forest Fragmentation Index",
+};
+
+/** Fixed group layout for the Top-13 Random Forest regression scenario. */
+const SCENARIO_GROUPS: { name: string; features: string[] }[] = [
+  {
+    name: "Temporal & Socio-Economic",
+    features: [
+      "Population_Density",
+      "GDP_Per_Capita",
+      "Poverty_Rate_Pct",
+      "Employment_Agri_Pct",
+    ],
+  },
+  {
+    name: "Land & Forest",
+    features: [
+      "Agricultural_Land_Pct",
+      "Forest_Cover_Pct",
+      "Forest_Fragmentation_Index",
+    ],
+  },
+  {
+    name: "Climate & Air Quality",
+    features: [
+      "PM25_Mean_Exposure_ug_m3",
+      "Temperature_Anomaly_C",
+      "Extreme_Heat_Days_Count",
+    ],
+  },
+  {
+    name: "Biodiversity & Environmental Impact",
+    features: [
+      "Biodiversity_Impact_Index",
+      "IUCN_Threatened_Species_Count",
+      "Environmental_Impact_Score",
+    ],
+  },
+];
+
+function fallbackGroup(name: string): string {
+  if (name === "Year" || /Population|GDP|Poverty|Employment|Rural/.test(name))
+    return "Temporal & Socio-Economic";
+  if (/Forest|Agricultural|Fragmentation/.test(name)) return "Land & Forest";
+  if (/Temperature|Precipitation|Drought|Heat|PM25|PM10|SPEI|CO2|Carbon/.test(name))
+    return "Climate & Air Quality";
+  return "Biodiversity & Environmental Impact";
+}
+
+/** Group features (in model order) using the fixed layout, with a regex
+ *  fallback for features outside the pinned Top-13 set (other models). */
+function groupFeatures(fs: FeatureMeta[]): Record<string, FeatureMeta[]> {
+  const groups: Record<string, FeatureMeta[]> = {};
+  const byName = new Map(fs.map((f) => [f.name, f]));
+  const placed = new Set<string>();
+  for (const g of SCENARIO_GROUPS) {
+    const arr: FeatureMeta[] = [];
+    for (const n of g.features) {
+      const f = byName.get(n);
+      if (f) {
+        arr.push(f);
+        placed.add(n);
+      }
+    }
+    if (arr.length) groups[g.name] = arr;
+  }
+  for (const f of fs) {
+    if (!placed.has(f.name)) (groups[fallbackGroup(f.name)] ??= []).push(f);
+  }
+  return groups;
+}
+
 export function PredictionPage() {
   const models = useApi<ModelOption[]>(() => forestApi.models(), []);
   const meta = useApi(() => forestApi.featureMeta(), []);
@@ -31,37 +107,33 @@ export function PredictionPage() {
   const [predicting, setPredicting] = useState(false);
   const [predictError, setPredictError] = useState<string | null>(null);
 
-  const features = meta.data?.features ?? [];
+  const allFeatures = meta.data?.features ?? [];
+  const activeModel = models.data?.find((m) => m.key === modelKey);
+
+  // Feature schema consumed by the active model, in the exact model order.
+  const modelFeatureNames = useMemo(() => {
+    if (activeModel?.features?.length) return activeModel.features;
+    return allFeatures.map((f) => f.name);
+  }, [activeModel, allFeatures]);
+
+  // Slider metadata now restricted to the active model's inputs only.
+  const features = useMemo(() => {
+    const byName = new Map(allFeatures.map((f) => [f.name, f]));
+    return modelFeatureNames
+      .map((n) => byName.get(n))
+      .filter((f): f is FeatureMeta => Boolean(f));
+  }, [allFeatures, modelFeatureNames]);
+
+  const grouped = useMemo(() => groupFeatures(features), [features]);
 
   useEffect(() => {
-    if (features.length && Object.keys(values).length === 0) {
+    if (allFeatures.length && Object.keys(values).length === 0) {
       const init: Record<string, number> = {};
-      for (const f of features) init[f.name] = f.median ?? f.mean;
+      for (const f of allFeatures) init[f.name] = f.median ?? f.mean;
       setValues(init);
     }
-  }, [features, values]);
+  }, [allFeatures, values]);
 
-  const grouped = useMemo(() => {
-    const groups: Record<string, FeatureMeta[]> = {
-      "Temporal & Socio-Economic": [],
-      "Land & Forest": [],
-      "Climate & Air Quality": [],
-      "Biodiversity & Habitat": [],
-    };
-    for (const f of features) {
-      const n = f.name;
-      if (n === "Year" || /Population|GDP|Poverty|Employment|Rural/.test(n))
-        groups["Temporal & Socio-Economic"].push(f);
-      else if (/Forest|Agricultural|Fragmentation/.test(n))
-        groups["Land & Forest"].push(f);
-      else if (/Temperature|Precipitation|Drought|Heat|PM25|PM10|SPEI|CO2|Carbon/.test(n))
-        groups["Climate & Air Quality"].push(f);
-      else groups["Biodiversity & Habitat"].push(f);
-    }
-    return groups;
-  }, [features]);
-
-  const activeModel = models.data?.find((m) => m.key === modelKey);
   const isClassification = activeModel?.task === "classification";
 
   const applyPreset = (key: "healthy" | "degraded") => {
@@ -73,7 +145,16 @@ export function PredictionPage() {
     setPredicting(true);
     setPredictError(null);
     try {
-      setResult(await forestApi.predict(modelKey, values));
+      // Build the payload in the exact model feature order — no extra
+      // features, no Year, and missing values fall back to the training
+      // median (never 0).
+      const byName = new Map(allFeatures.map((f) => [f.name, f]));
+      const payload: Record<string, number> = {};
+      for (const name of modelFeatureNames) {
+        const metaFor = byName.get(name);
+        payload[name] = values[name] ?? metaFor?.median ?? metaFor?.mean ?? 0;
+      }
+      setResult(await forestApi.predict(modelKey, payload));
     } catch (e) {
       setPredictError(e instanceof Error ? e.message : "Prediction failed");
     } finally {
@@ -89,7 +170,7 @@ export function PredictionPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="AI Prediction"
+        title="Model Prediction"
         description="Build your own country scenario with the sliders, then let the trained models estimate deforestation in hectares or classify Low/High risk. Presets give you a realistic starting point in one click."
         actions={
           <div className="flex gap-2">
@@ -112,7 +193,7 @@ export function PredictionPage() {
         <div className="space-y-4 xl:col-span-2">
           <ChartCard
             title="Scenario Console"
-            subtitle={`${features.length} environmental & socio-economic sliders · pick a model, set values, predict`}
+            subtitle={`${features.length} selected environmental & socio-economic features · set values and predict`}
             actions={
               <select
                 value={modelKey}
@@ -139,7 +220,7 @@ export function PredictionPage() {
                       {feats.map((f) => (
                         <div key={f.name}>
                           <div className="mb-1 flex items-center justify-between text-[11px]">
-                            <span className="text-emerald-100/70">{prettyName(f.name)}</span>
+                            <span className="text-emerald-100/70">{SCENARIO_LABELS[f.name] ?? prettyName(f.name)}</span>
                             <span className="font-mono text-emerald-300">
                               {values[f.name]?.toLocaleString?.() ?? f.median}
                             </span>

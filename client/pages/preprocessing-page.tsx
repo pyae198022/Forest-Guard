@@ -7,7 +7,6 @@ import {
   Filter,
   Play,
   RefreshCw,
-  Sigma,
   Split,
   Wand2,
 } from "lucide-react";
@@ -141,60 +140,9 @@ export function PreprocessingPage() {
         </ChartCard>
       </div>
 
-      {/* skewness + onehot/minmax */}
+      {/* minmax normalisation */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <ChartCard
-          title="Skewness Before / After log1p"
-          subtitle="How log1p tames the five most extreme distributions"
-        >
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="text-emerald-100/50">
-                <th className="px-2 py-2">Feature</th>
-                <th className="px-2 py-2 text-right">Skew before</th>
-                <th className="px-2 py-2 text-right">Skew after</th>
-                <th className="px-2 py-2 text-right">Zeros</th>
-              </tr>
-            </thead>
-            <tbody>
-              {o.skewness.map((s) => (
-                <tr key={s.feature} className="border-b border-white/[0.04]">
-                  <td className="px-2 py-2 font-medium text-emerald-100">{prettyName(s.feature)}</td>
-                  <td className="px-2 py-2 text-right">
-                    <span className="rounded-md bg-rose-400/15 px-1.5 py-0.5 text-rose-300">{s.skew_before}</span>
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    <span className="rounded-md bg-emerald-400/15 px-1.5 py-0.5 text-emerald-300">{s.skew_after}</span>
-                  </td>
-                  <td className="px-2 py-2 text-right text-emerald-100/50">{s.zeros}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ChartCard>
-
         <div className="space-y-4">
-          <ChartCard
-            title="One-Hot Encoding"
-            subtitle="Categorical → numeric via dummy columns"
-          >
-            <div className="flex items-center justify-around py-2 text-center">
-              <div>
-                <div className="text-xl font-semibold text-white">{o.onehot.columns_before}</div>
-                <div className="text-[11px] text-emerald-100/50">columns before</div>
-              </div>
-              <Sigma className="h-5 w-5 text-emerald-300/50" />
-              <div>
-                <div className="text-xl font-semibold text-emerald-300">+{o.onehot.dummy_columns}</div>
-                <div className="text-[11px] text-emerald-100/50">dummies ({o.onehot.features_encoded.join(" · ")})</div>
-              </div>
-              <div>
-                <div className="text-xl font-semibold text-white">{o.onehot.columns_after}</div>
-                <div className="text-[11px] text-emerald-100/50">columns after</div>
-              </div>
-            </div>
-          </ChartCard>
-
           <ChartCard
             title="Min-Max Normalisation Preview"
             subtitle="Values rescaled to [0, 1] — fit on the training split"

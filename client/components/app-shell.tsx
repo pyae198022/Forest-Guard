@@ -246,7 +246,7 @@ export function AppShell({ active, onNavigate, children }: AppShellProps) {
 
                 <div className="ml-auto flex items-center gap-2">
                   <span className="hidden rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-1 text-[11px] font-medium text-emerald-300 sm:inline">
-                    v1.0 · University Project
+                    Deforestation Analysis
                   </span>
                   <Button
                     variant="ghost"
@@ -281,7 +281,6 @@ export function AppShell({ active, onNavigate, children }: AppShellProps) {
             <footer className="mt-auto border-t border-white/[0.06] bg-[#04100b]/60">
               <div className="flex flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-emerald-100/35 md:flex-row md:px-8">
                 <p>ForestGuard AI — Data Mining university project · 4,030 records · 27 features</p>
-                <p>React 19 · Next.js 16 · FastAPI · scikit-learn · SQLite</p>
               </div>
             </footer>
           </div>

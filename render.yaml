@@ -1,0 +1,24 @@
+# Render blueprint for the ForestGuard AI FastAPI backend.
+#
+# The repo already ships the dataset (dataset/), the SQLite mirror
+# (server/database/forestguard.db) and the trained joblib artefacts
+# (server/models/) so booting is instant — the backend does NOT retrain
+# on every cold start.
+#
+# Deploy options:
+#   1. Dashboard:  "New Web Service" -> pick repo
+#      Build:      pip install -r requirements.txt
+#      Start:      uvicorn server.app:app --host 0.0.0.0 --port $PORT
+#      (Health check path: /health)
+#   2. repo file:  connect this repository; Render reads render.yaml.
+services:
+  - type: web
+    name: forestguard-backend
+    runtime: python
+    plan: free
+    healthCheckPath: /health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3

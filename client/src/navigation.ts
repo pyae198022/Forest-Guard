@@ -61,7 +61,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     key: "prediction",
-    label: "AI Prediction",
+    label: "Model Prediction",
     short: "Predict",
     icon: Sparkles,
     description:

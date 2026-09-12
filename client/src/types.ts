@@ -379,6 +379,7 @@ export interface ModelOption {
   key: string;
   label: string;
   task: "regression" | "classification";
+  features: string[];
 }
 
 export interface FeatureMeta {

@@ -1,5 +1,14 @@
 import type { NextConfig } from "next";
 
+/**
+ * Backend API origin.
+ *   - local dev:              unset  -> http://127.0.0.1:3010 (FastAPI on :3010)
+ *   - Vercel production:      set BACKEND_URL to the Render service URL, e.g.
+ *                             https://forestguard-backend.onrender.com
+ */
+const backendUrl =
+  process.env.BACKEND_URL?.replace(/\/$/, "") || "http://127.0.0.1:3010";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   /* config options here */
@@ -8,20 +17,22 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
   /**
-   * Local-dev convenience: proxy API calls to the FastAPI mini-service on
-   * :3010.  On the sandbox preview domain the gateway handles this via the
-   * ?XTransformPort=3010 param, so the rewrite is only exercised when the
-   * app is opened directly on localhost:3000.
+   * Proxy the FastAPI mini-service in front of the Next.js app.
+   *   - local dev:    forwards to the local Python service on :3010
+   *   - production:   forwards to the Render-hosted backend when
+   *                   BACKEND_URL is configured
+   * The `?XTransformPort=3010` query used by the sandbox gateway is ignored
+   * by these destination hosts.
    */
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: "http://127.0.0.1:3010/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
       {
         source: "/health",
-        destination: "http://127.0.0.1:3010/health",
+        destination: `${backendUrl}/health`,
       },
     ];
   },

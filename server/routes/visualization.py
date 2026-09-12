@@ -23,13 +23,14 @@ def histogram(feature: str = Query(...), bins: int = Query(24, ge=5, le=80)):
     df = _df()
     if feature not in df.columns:
         return responses.err(f"Unknown feature '{feature}'", 404)
-    s = df[feature].dropna().astype(float)
-    if s.dtype == object or len(s.unique()) <= 12:
+    s = df[feature].dropna()
+    if not pd.api.types.is_numeric_dtype(s) or len(s.unique()) <= 12:
         vc = df[feature].value_counts()
         return responses.ok({
             "feature": feature, "skew": None,
             "data": [{"bin": str(k), "count": int(v)}
                      for k, v in vc.items()]})
+    s = s.astype(float)
     skew_before = float(s.skew())
     use_log = feature in mlcfg.LOG1P_FEATURES or skew_before > 3
     values = np.log1p(s) if use_log else s

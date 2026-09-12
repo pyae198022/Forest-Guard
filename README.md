@@ -101,3 +101,11 @@ incl. 5-fold CV) and persists joblib artefacts + `state.json`; subsequent
 boots restore instantly. In local dev, `next.config.ts` rewrites `/api/*` and
 `/health` to :3010; on the sandbox preview domain the gateway's
 `?XTransformPort=3010` performs the same routing.
+
+## Deployment
+
+Frontend → **Vercel**, backend → **Render**. The frontend rewrites `/api/*`
+and `/health` to the Render service via the `BACKEND_URL` env var (see
+`next.config.ts`); the dataset, SQLite mirror and trained joblib artefacts
+are committed so the backend boots instantly. See **`DEPLOYMENT.md`** for
+the full step-by-step guide (`render.yaml` and `vercel.json` are ready).
