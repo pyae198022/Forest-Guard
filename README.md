@@ -1,7 +1,7 @@
-# ForestGuard AI — PJBook Edition 🌲
+# ForestGuard  🌲
 
-Interactive, full-stack companion to the **IS-212 Data & Knowledge Mining
-project book** *"Deforestation Data with Climate and Habitat"* (Semester IX,
+Interactive, full-stack companion to the **Data & Knowledge Mining
+project** *"Deforestation Data with Climate and Habitat"* (Semester IX,
 University of Computer Studies, Yangon). Every chapter of the book's
 methodology is implemented as a live, reproducible web application.
 
