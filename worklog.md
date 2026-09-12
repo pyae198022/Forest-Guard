@@ -1,9 +1,9 @@
-# ForestGuard AI — Multi-Agent Worklog
+# ForestGuard — Multi-Agent Worklog
 
 ---
 Task ID: 0
 Agent: main (Super Z)
-Task: Initialize environment, verify stack availability, plan ForestGuard AI fullstack build
+Task: Initialize environment, verify stack availability, plan ForestGuard fullstack build
 
 Work Log:
 - Ran fullstack init script; Next.js 16 dev server running on port 3000
@@ -20,7 +20,7 @@ Stage Summary:
 ---
 Task ID: 1
 Agent: main (Super Z)
-Task: Build complete ForestGuard AI fullstack app (structure, dataset, FastAPI ML backend, Next.js glassmorphism frontend, verification)
+Task: Build complete ForestGuard fullstack app (structure, dataset, FastAPI ML backend, Next.js glassmorphism frontend, verification)
 
 Work Log:
 - Created requested folder structure: client/{src,components,pages,charts,hooks,services,assets}, server/{routes,ml,models,database,utils}, dataset/, scripts/
@@ -41,7 +41,7 @@ Stage Summary:
 ---
 Task ID: 2
 Agent: main (Super Z)
-Task: Rebuild entire ForestGuard AI app to faithfully implement the uploaded PJBook (47p) methodology + real dataset (Deforestation_Data_With_Climate_And_Habitat.xlsx)
+Task: Rebuild entire ForestGuard app to faithfully implement the uploaded PJBook (47p) methodology + real dataset (Deforestation_Data_With_Climate_And_Habitat.xlsx)
 
 Work Log:
 - Read all 47 pages of PJBook.pdf; extracted full spec: temporal split (train<=2015/test>2015), 5-feature leakage exclusion, log1p on 5 skewed features, one-hot Entity/Region, Min-Max fit-on-train, hybrid feature selection (Spearman+MI+RF permutation), Top-13 regression / Top-10 classification subsets (Table 4.1.1), RF+MLP models, Apriori (qcut 3 bins, support>=0.10, conf>=0.60), K-Means K2-10 by silhouette, 5-fold CV on train only, ROC/AUC, chapter-5 advantages/limitations

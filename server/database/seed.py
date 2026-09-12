@@ -1,4 +1,4 @@
-"""ForestGuard AI — dataset bootstrap.
+"""ForestGuard — dataset bootstrap.
 
 Imports the uploaded PJBook Excel dataset (Deforestation_Data_With_
 Climate_And_Habitat) into the canonical CSV + SQLite mirror used by

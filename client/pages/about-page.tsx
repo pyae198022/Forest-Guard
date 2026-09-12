@@ -19,7 +19,7 @@ export function AboutPage() {
     <div className="space-y-5">
       <PageHeader
         title="About This Project"
-        description="ForestGuard AI turns a university data-mining study of global deforestation into a live, interactive application — explore the data, watch the preprocessing pipeline run, discover patterns and test the trained models, all in the browser."
+        description="ForestGuard turns a university data-mining study of global deforestation into a live, interactive application — explore the data, watch the preprocessing pipeline run, discover patterns and test the trained models, all in the browser."
         actions={
           <span className="glass-chip inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-emerald-200/80">
             <GraduationCap className="h-3.5 w-3.5 text-emerald-300" /> Data Mining · University Project

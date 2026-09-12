@@ -1,4 +1,4 @@
-# ForestGuard  🌲
+# ForestGuard — PJBook Edition 🌲
 
 Interactive, full-stack companion to the **Data & Knowledge Mining
 project** *"Deforestation Data with Climate and Habitat"* (Semester IX,

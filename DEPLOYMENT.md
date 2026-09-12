@@ -1,4 +1,4 @@
-# Deployment Guide — ForestGuard AI (Vercel + Render)
+# Deployment Guide — ForestGuard (Vercel + Render)
 
 Two-tier deployment: the **Next.js frontend** runs on **Vercel** and the
 **FastAPI/ML backend** runs on **Render**. The frontend proxies every `/api/*`

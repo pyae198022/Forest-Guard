@@ -1,4 +1,4 @@
-"""ForestGuard AI — PJBook section 2.2 preprocessing pipeline.
+"""ForestGuard — PJBook section 2.2 preprocessing pipeline.
 
 Steps (mirroring the project book):
     2.2.1  Missing-value inspection (dataset ships with zero NaN)

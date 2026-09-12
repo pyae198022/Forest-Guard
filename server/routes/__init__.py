@@ -1,4 +1,4 @@
-"""API router aggregation for ForestGuard AI."""
+"""API router aggregation for ForestGuard."""
 
 from fastapi import APIRouter
 

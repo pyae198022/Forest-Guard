@@ -1,4 +1,4 @@
-"""SQLite persistence layer for ForestGuard AI.
+"""SQLite persistence layer for ForestGuard.
 
 Stores the raw dataset, preprocessed variants, and run history
 using pandas + the stdlib sqlite3 driver (zero external deps).

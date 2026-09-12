@@ -1,5 +1,5 @@
 """
-ForestGuard AI — FastAPI application
+ForestGuard — FastAPI application
 ====================================
 Data-mining backend implementing the IS-212 PJBook methodology.
 
@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="ForestGuard AI API (PJBook)",
+        title="ForestGuard API (PJBook)",
         description="IS-212 Data Mining backend: dataset, preprocessing, "
                     "visualization, association rules, clustering, "
                     "prediction, evaluation",

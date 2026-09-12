@@ -1,4 +1,4 @@
-# ForestGuard AI — FastAPI backend runtime (Render / any Python host).
+# ForestGuard — FastAPI backend runtime (Render / any Python host).
 # Versions are pinned to the environment the app was validated against.
 fastapi==0.141.1
 uvicorn==0.52.4

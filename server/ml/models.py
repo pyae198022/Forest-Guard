@@ -1,4 +1,4 @@
-"""ForestGuard AI — PJBook section 3.2 modelling layer.
+"""ForestGuard — PJBook section 3.2 modelling layer.
 
 Implements the book's supervised pipeline:
 

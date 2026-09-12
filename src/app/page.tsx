@@ -15,7 +15,7 @@ import {
 import type { PageKey } from "@client/src/types";
 
 /**
- * ForestGuard AI — single-page application shell.
+ * ForestGuard — single-page application shell.
  * Navigation switches page views client-side; all data comes from the
  * Python FastAPI mini-service on :3010 (via the gateway proxy).
  */

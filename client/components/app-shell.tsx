@@ -95,7 +95,7 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
       {!collapsed && (
         <div className="min-w-0">
           <p className="truncate text-[15px] font-semibold tracking-tight text-white">
-            ForestGuard <span className="text-emerald-300">AI</span>
+            ForestGuard
           </p>
           <p className="text-[11px] text-emerald-100/40">Data Mining Suite</p>
         </div>
@@ -280,7 +280,7 @@ export function AppShell({ active, onNavigate, children }: AppShellProps) {
             {/* sticky footer */}
             <footer className="mt-auto border-t border-white/[0.06] bg-[#04100b]/60">
               <div className="flex flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-emerald-100/35 md:flex-row md:px-8">
-                <p>ForestGuard AI — Data Mining university project · 4,030 records · 27 features</p>
+                <p>ForestGuard — Data Mining university project · 4,030 records · 27 features</p>
               </div>
             </footer>
           </div>

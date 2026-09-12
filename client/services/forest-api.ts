@@ -1,4 +1,4 @@
-/** Typed endpoint wrappers for the ForestGuard AI backend. */
+/** Typed endpoint wrappers for the ForestGuard backend. */
 
 import { apiGet, apiPost, apiUpload } from "./api";
 import type {

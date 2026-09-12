@@ -1,4 +1,4 @@
-"""Final end-to-end smoke test for the rebuilt (PJBook) ForestGuard AI backend."""
+"""Final end-to-end smoke test for the rebuilt (PJBook) ForestGuard backend."""
 import json
 import urllib.request
 import urllib.error

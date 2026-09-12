@@ -17,6 +17,11 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
   /**
+   * Hide the Next.js development tools indicator (bottom-left "N" button and
+   * its Route/Bundler/Preferences popup) via the official config option.
+   */
+  devIndicators: false,
+  /**
    * Proxy the FastAPI mini-service in front of the Next.js app.
    *   - local dev:    forwards to the local Python service on :3010
    *   - production:   forwards to the Render-hosted backend when

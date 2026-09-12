@@ -1,4 +1,4 @@
-"""ForestGuard AI — PJBook section 3.1.1 association-rule mining.
+"""ForestGuard — PJBook section 3.1.1 association-rule mining.
 
 A self-contained Apriori implementation (no mlxtend dependency):
 

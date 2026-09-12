@@ -1,4 +1,4 @@
-"""ForestGuard AI — PJBook methodology constants.
+"""ForestGuard — PJBook methodology constants.
 
 Every constant here is derived from the IS-212 project book
 ("Deforestation Data with Climate and Habitat", 4,030 rows x 27 columns,

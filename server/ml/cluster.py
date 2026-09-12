@@ -1,4 +1,4 @@
-"""ForestGuard AI — PJBook section 3.1.2 clustering analysis.
+"""ForestGuard — PJBook section 3.1.2 clustering analysis.
 
 K-Means on the ten book-chosen features (scaled), K evaluated from 2 to 10
 with Inertia (WCSS) + Silhouette; random_state=42, n_init=10.  Includes

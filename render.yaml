@@ -1,4 +1,4 @@
-# Render blueprint for the ForestGuard AI FastAPI backend.
+# Render blueprint for the ForestGuard FastAPI backend.
 #
 # The repo already ships the dataset (dataset/), the SQLite mirror
 # (server/database/forestguard.db) and the trained joblib artefacts

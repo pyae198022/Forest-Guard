@@ -1,4 +1,4 @@
-/** ForestGuard AI design tokens: palette, risk colors, chart series. */
+/** ForestGuard design tokens: palette, risk colors, chart series. */
 
 export const RISK_COLORS: Record<string, string> = {
   Low: "#34d399", // emerald-400
