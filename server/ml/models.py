@@ -23,6 +23,8 @@ state.json so restarts are instant.
 from __future__ import annotations
 
 import json
+import logging
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -68,6 +70,79 @@ STATE: dict = {"trained": False, "best_model": None}
 
 MODEL_DIR = utils_cfg.MODEL_DIR
 STATE_PATH = MODEL_DIR / "state.json"
+
+# ------------------------------------------------------------- run caches ----
+# Trained artefacts, state and training medians are loaded ONCE and reused for
+# the life of the process.  On Render's free tier (very low CPU/memory) a
+# per-request re-load of the ~30 MB joblib bundle would routinely exceed the
+# platform's request timeout and surface as 502/504, so `predict()` must never
+# re-read these from disk.
+_ARTEFACTS: dict | None = None
+_STATE_CACHE: dict | None = None
+_MEDIANS_CACHE: dict | None = None
+_LOAD_LOCK = threading.Lock()
+logger = logging.getLogger("forestguard.models")
+
+
+def load_artefacts():
+    """Load the trained bundle once (thread-safe) and return the cached copy."""
+    global _ARTEFACTS
+    if _ARTEFACTS is None:
+        with _LOAD_LOCK:
+            if _ARTEFACTS is None:
+                _ARTEFACTS = joblib.load(MODEL_DIR / "forestguard_pjbook.joblib")
+    return _ARTEFACTS
+
+
+def load_state() -> dict | None:
+    """Read state.json once and cache it (avoids re-parsing on hot paths)."""
+    global _STATE_CACHE
+    if _STATE_CACHE is None:
+        if not STATE_PATH.exists():
+            return None
+        try:
+            _STATE_CACHE = json.loads(STATE_PATH.read_text())
+        except Exception:
+            _STATE_CACHE = {}
+    return _STATE_CACHE
+
+
+def _load_medians() -> dict:
+    """Training-split per-feature medians used to impute missing inputs."""
+    global _MEDIANS_CACHE
+    if _MEDIANS_CACHE is None:
+        with _LOAD_LOCK:
+            if _MEDIANS_CACHE is None:
+                df = load_raw()
+                tr = df[df["Year"] <= mlcfg.SPLIT_YEAR]
+                feats = load_artefacts()["all_feats"]
+                _MEDIANS_CACHE = {
+                    f: float(tr[f].median()) for f in feats
+                }
+    return _MEDIANS_CACHE
+
+
+def preload() -> None:
+    """Force every runtime-cached artefact into memory (called at boot).
+
+    Also verifies the persisted files exist so boot fails fast with a clear
+    error instead of a confused 404/500 later.
+    """
+    art = load_artefacts()
+    if not art.get("models"):
+        raise RuntimeError(
+            "Model artefact 'forestguard_pjbook.joblib' exists but contains "
+            "no fitted models - retrain locally and redeploy")
+    state = load_state()
+    if not state:
+        raise RuntimeError(
+            "Model state file 'state.json' is missing - retrain locally and "
+            "redeploy")
+    _load_medians()
+    logger.info(
+        "Model artefacts preloaded (%d regressors, %d classifiers)",
+        len(art["models"]["regression"]),
+        len(art["models"]["classification"]))
 
 
 # ============================================================== dataset ====
@@ -365,6 +440,12 @@ def save_bundle(bundle: dict, cv: dict) -> None:
     }
     STATE_PATH.write_text(json.dumps(state, default=str))
 
+    # invalidate the runtime caches so the freshly trained bundle is used
+    global _ARTEFACTS, _STATE_CACHE, _MEDIANS_CACHE
+    _ARTEFACTS = None
+    _STATE_CACHE = state
+    _MEDIANS_CACHE = None
+
     with sqlite.get_connection() as conn:
         conn.execute(
             f"INSERT INTO {utils_cfg.TABLE_MODEL_RUNS} "
@@ -418,12 +499,11 @@ def predict_with_model(model_key: str, rows: list[dict]) -> list[dict]:
     for f in full:
         if f not in X.columns:
             X[f] = np.nan
-    # impute missing with the training-split median from SQLite
-    df = sqlite.load_dataframe(utils_cfg.TABLE_RAW)
-    tr = df[df["Year"] <= mlcfg.SPLIT_YEAR]
+    # impute missing with the training-split median (precomputed once)
+    medians = _load_medians()
     for f in full:
         if X[f].isna().any():
-            X[f] = X[f].fillna(float(tr[f].median()))
+            X[f] = X[f].fillna(medians[f])
     Xs_full = art["scaler"].transform(X[full].astype(float))
     Xs = pd.DataFrame(Xs_full, columns=full)[feats]
 

@@ -46,6 +46,25 @@ def _prewarm_pipeline_cache() -> None:
         logger.exception("Pipeline cache warming failed (non-fatal)")
 
 
+def _warm_heavy_caches() -> None:
+    """Precompute request-time-expensive work at boot.
+
+    Association mining, K-Means and the loaded model bundle are all heavy;
+    computing them lazily inside a request on low-power hosts blows through
+    the host proxy's timeout (observed as 502 in production).  Warming them
+    here makes every later request fast.
+    """
+    from server.routes import mining
+
+    mining.warm()
+    logger.info("Association + clustering caches warmed")
+
+    from server.ml import models
+
+    models.preload()
+    logger.info("Model artefacts preloaded")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Bootstrapping ForestGuard backend (PJBook edition) ...")
@@ -56,6 +75,7 @@ async def lifespan(app: FastAPI):
     logger.info("Models ready - best regression: %s | best classifier: %s",
                 STATE.get("best_regression", {}).get("model"),
                 STATE.get("best_classification", {}).get("model"))
+    _warm_heavy_caches()
     _prewarm_pipeline_cache()
     logger.info("ForestGuard backend ready - serving on port %s",
                 config.SERVER_PORT)

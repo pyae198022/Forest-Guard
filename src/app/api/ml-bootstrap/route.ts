@@ -25,6 +25,21 @@ async function backendHealthy(): Promise<boolean> {
 }
 
 export async function GET() {
+  // Sandbox/dev-only helper: it spawns a local uvicorn on :3010.  It must
+  // never run in production — on Vercel the backend is a separate Render
+  // service reached through the /api/* rewrite.  Guard with an explicit env
+  // flag so production returns a clear, inert response.
+  if (process.env.NODE_ENV !== "development" &&
+      process.env.ENABLE_ML_BOOTSTRAP !== "true") {
+    return NextResponse.json(
+      {
+        status: "disabled",
+        reason: "ML bootstrap is only available in the development/sandbox environment",
+      },
+      { status: 200 },
+    );
+  }
+
   if (await backendHealthy()) {
     return NextResponse.json({ status: "healthy", spawned: false });
   }
